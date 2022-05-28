@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<body>
+<center><h2>LaSolv: The Laplacian Circuit Solver</h2></center>
+<center><h3>Solving nodal equations without the headache</h3></center>
+<center><h3><i>Now With Simplifying Equations and Substitution!!</i></h3></center>
+
+<p>LaSolv is used to solve an AC representation of an electrical circuit
+using just symbols (and optionally numbers)- like you probably did in school.
+It reads in a text file- similar to a SPICE circuit file- that represents the circuit. 
+It then solves it in much the same way that you would do it by hand. The circuit can be
+made of resistors, capacitors, inductors, voltage/current sources, or
+controlled sources. They are connected together using node numbers; nodes
+can only be integers, with ground always being node 0. Currently only one input
+source is allowed. If a circuit with more than one input needs to be solved, use
+superposition. The results can be confusing if more than one independent source is supplied.
+<p>After the component type identifier, is a unique label for that component. The
+component type letter and label are case-insensitive. Tabs or spaces can separate
+labels and nodes.
+<p>The ability to simplify the equation using &lt&lt and &gt&gt relationships has been
+added. For instance, if a circuit has values for Re and Rl, and Rl is typically much larger
+than Re, the equation can be simplified by replacing (Re+Rl) with Rl. A common
+simplification in circuits with local feedback is to replace (Rl*gm+1) with Rl*gm.
+<p>Substituting common groups of variables for other well-known variables is now
+supported. Rpi*gm is also known as &beta;o, so all places where Rpi*gm appears can
+be replaced with &beta;o.
+<p>Component values are optional but can be supplied (denoted as 
+&ltvalue&gt in the definitions below). If they are, the solution equation
+with their values substituted in is also shown. They use the usual
+units for each component- ohms, amps, farads, etc. Standard
+engineering units are allowed- k, M, p, etc. Currently the units can't be specified- 
+pF, mH, etc, only the number suffix is allowed.
+<p>If all of the component values are supplied (except vxxx and ixxx sources), the
+equation can be plotted. The frequency will be selected
+automatically if the 'Freq start' or 'Freq stop' fields are left empty. 
+If both fields have values in them, those will be used for the x-axis limits. 
+The magnitude can be linear or in dB. The result can be also be plotted in it's real
+and imaginary parts, or as an RC or RL equivalent circuit. The real/imaginary and
+RC/RL circuit can use either a series or parallel model. This
+is useful when looking at input or output impedances, or trans-impedances.
+<H2><CENTER><FONT COLOR="#000099">Basic Components</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Resistors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Rxxxx N1 N2 &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>R1 1 2 100</TT></DD>
+	<DD><TT>RC1 12 17 1K</TT></DD>
+</DL>
+<TT>N1 and N2 are the two element nodes. </TT>
+
+<H3><FONT COLOR="#006600">Capacitors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Cxxxx N+ N- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>C11 1 2</TT></DD>
+	<DD><TT>Cout 12 17 1u</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes.</TT>
+
+<H3><FONT COLOR="#006600">Inductors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Lxxxx N+ N- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Lin 3 2</TT></DD>
+	<DD><TT>Lbw 2 9 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes.</TT>
+
+<H2><CENTER><FONT COLOR="#000088">Voltage and Current Sources</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Independent Sources</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Vxxxx N+ N- &ltvalue&gt</TT></DD>
+	<DD><TT>Ixxxx N+ N- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Vin 1 0</TT></DD>
+	<DD><TT>Vsense 2 9</TT></DD>
+	<DD><TT>Iin 1 0</TT></DD>
+	<DD><TT>Iout 2 9</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. These two sources do not need or allow a value to be
+associated with them. For a voltage source, positive current flows into the positive terminal,
+through the source, and out of the negative terminal. For the current source, positive current
+flows into the positive terminal, through the source, and out of the negative terminal.
+In addition to being input sources, the current through a voltage source is also used to
+sense the control current for 
+current controlled voltage sources and current controlled current sources.</TT>
+
+<H3><FONT COLOR="#006600">Linear Dependent Sources</FONT></H3>
+<H4><FONT COLOR="#00AA00">Voltage Controlled Voltage Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Exxxx N+ N- C+ C- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>E1 3 2 3 0</TT></DD>
+	<DD><TT>egn 2 9 3 4 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. C+ and C- are the nodes defining the controlling voltage. '&lvvalue&gt', if supplied, is the voltage gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Current Controlled Current Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Fxxxx N+ N- vname &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>F1 3 2 vsense</TT></DD>
+	<DD><TT>fout 2 9 vp 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. 'vname' is the name of the voltage source that carries
+the controling current. Postive controlling current (through the voltage source) is into the
+positive node, through the
+source, and out of the negative node. '&ltvalue&gt', if supplied, is the current gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Voltage Controlled Current Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Gxxxx N+ N- C+ C- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>G0 3 2 4 3 0.12</TT></DD>
+	<DD><TT>gm 2 9 5 0</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. C+ and C- are the nodes defining the controlling
+voltage. '&lvvalue&gt', if supplied, is the trans-conductance gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Current Controlled Voltage Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Hxxxx N+ N- vname &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Hx 0 4 vsense</TT></DD>
+	<DD><TT>hout 11 9 vp 1k</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. 'vname' is the name of the voltage source that carries
+the controling current. Positive controlling current (through the voltage source) is into the
+positive node, through the
+source, and out of the negative node. '&ltvalue&gt', if supplied, is the trans-resistance gain.</TT>
+
+<H2><CENTER><FONT COLOR="#000099">Controls</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Solve</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Solve N1 N2 N3 N4</TT></DD>
+	<DD><TT>Solve N1 N2 indep-src</TT></DD>
+	<DD><TT>Solve indep-src N1 N2</TT></DD>
+	<DD><TT>Solve indep-src1 indep-src2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>solve 10 2 0 100		; Solve for voltage gain, v(10,2)/v(0,10)</TT></DD>
+	<DD><TT>solve vin iin			; Solve for current gain, i(vin)/iin</TT></DD>
+	<DD><TT>solve vin 10 0			; Solve for transconductance, i(vin)/v(10,0)</TT></DD>
+	<DD><TT>solve iout iin			; Solve for current gain, iout/iin</TT></DD>
+	<DD><TT>solve 15 2 iin			; Solve for transresistance, v(15,2)/iin</TT></DD>
+</DL>
+<TT>Specifies what circuit quantities to solve for. Only one solve statement is allowed per input
+file. The output is specified first, then the input. Voltages must be specified with both
+the +tive and -tive nodes. Currents can be indentified either by the name of the voltage source
+they pass through, or with a current source.</TT>
+
+<H3><FONT COLOR="#006600">Simplify</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Si var1 &gt&gt var2</TT></DD>
+	<DD><TT>Si var1 &lt&lt var2</TT></DD>
+	<DD><TT>Si var1 &gt var2</TT></DD>
+	<DD><TT>Si var1 &lt var2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>simplify Re &lt Rload	; Assume Re &lt&lt Rload</TT></DD>
+	<DD><TT>simp Cpi &gt Cmu		; Assume Cpi &gt&gt Cmu</TT></DD>
+	<DD><TT>sim rs &gt re			; Assume rs &gt&gt re</TT></DD>
+	<DD><TT>si Cc &lt Cmu			; Assume Cc &lt&lt Cmu</TT></DD>
+</DL>
+<TT>Indicates one variable is much smaller or large than another; attempt to use this relationship
+to simplify the solution. The two variables much be of the same element type- two resistors, caps,
+inductors, etc. (Currently this is not verified and won't cause a warning.) 
+</TT>
+
+<H3><FONT COLOR="#006600">Substitute</FONT><FONT COLOR="#FF0000"> Not implemented yet... sorry :)</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Su var1  var2</TT></DD>
+	<DD><TT>Sub var1 var2</TT></DD>
+	<DD><TT>Subs var1 var2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>sub gm*Rpi  Beta	; Change occurances of gm*Rpi to Beta</TT></DD>
+	<DD><TT>su Rout/Ic  Va		  ; Change Rout/Ic to Va (Early voltage)</TT></DD>
+</DL>
+<TT>Substitute one expression for another to make the solution more readable or use more commonly
+known variables..
+</TT>
+
+<H3><FONT COLOR="#006600">Frequency</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>F)requency number</TT></DD>
+	<DD><TT>F number</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>freq 500M</TT></DD>
+	<DD><TT>frequency 10M</TT></DD>
+	<DD><TT>f 88k</TT></DD>
+</DL>
+<TT>Specifies the frequency at which the solution is evaluated.</TT>
+
+<H3><FONT COLOR="#006600">Output</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Output &ltfilename&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>output			; Send the solution to an HTML file with the same name as the circuit file.</TT></DD>
+	<DD><TT>output zin.html	; Send the solution to the file gain.html</TT></DD>
+	<DD><TT>output gain.htm	; Send the solution to the file zin.htm</TT></DD>
+</DL>
+<TT>Outputs the results into an HTML file (in addition to the screen) for easier reading. Only one output
+statement is allowed per input file. If the filename is omitted, the name of the cicuit file is used 
+and '.html' is appended ('.htm' if ran on a Windows machine). If your browser supports Mathml, that is used
+to make the equations look even prettier. Currently Google Chrome doesn't support this. Safari and IE do. The
+Safari version of the Mathml printer has a bug which causes any component names with a number in them to become
+invisible. A workaround has been implemented but it isn't perfect yet.</TT>
+
+<H2><CENTER><FONT COLOR="#000099">Miscellaneous</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Comments</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>* &lt....text....&gt</TT></DD>
+	<DD><TT>; &lt....text....&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>* This is a common emitter stage.</TT></DD>
+	<DD><TT>; Solve for the output impedance of the emitter follower.</TT></DD>
+	<DD><TT>gm 1 0 4 3 0.1m		; Models the output impedance.</TT></DD>
+</DL>
+<TT>Comments can start anywhere in a line, anything after the '*' or ';* is ignored.</TT>
+
+<H3><FONT COLOR="#006600">Engineering Notation</FONT></H3>
+<STYLE>
+	table {
+		border-collapse: collapse;
+		width: 30%;
+	}
+	th, td {
+		border: 1px solid blue;
+		padding: 5px;
+		text-align: center;
+		vertical-align: middle;
+	}
+</STYLE>
+<DL><CENTER>
+	<TABLE>
+	<TR><DD><TT>
+		<TH>Suffix</TH>
+		<TH>Symbol</TH>
+		<TH>Base</TH>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>yocto</TD>
+		<TD>y</TD>
+		<TD>1e-24</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>zepto</TD>
+		<TD>z</TD>
+		<TD>1e-21</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>atto</TD>
+		<TD>a</TD>
+		<TD>1e-18</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>femto</TD>
+		<TD>f</TD>
+		<TD>1e-15</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>pico</TD>
+		<TD>p</TD>
+		<TD>1e-12</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>nano</TD>
+		<TD>n</TD>
+		<TD>1e-9</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>micro</TD>
+		<TD>u</TD>
+		<TD>1e-6</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>milli</TD>
+		<TD>m</TD>
+		<TD>1e-3</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>kilo</TD>
+		<TD>k</TD>
+		<TD>1e3</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Mega</TD>
+		<TD>M</TD>
+		<TD>1e6</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Giga</TD>
+		<TD>G</TD>
+		<TD>1e9</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Tera</TD>
+		<TD>T</TD>
+		<TD>1e12</TD>
+	</TT></DD></TR>
+	</TABLE>
+</CENTER></DL>
+
+<H3><FONT COLOR="#006600">Example Circuit</FONT></H3>
+<DL>
+	<DT><TT>vin   1    0</TT></DT>
+	<DT><TT>r3    2    1    29k</TT></DT>
+	<DT><TT>cp    2    3    10n</TT></DT>
+	<DT><TT>vs    3    0</TT></DT>
+	<DT><TT>* Fout is a current controlled current source, the</TT></DT>
+	<DT><TT>* current though 'vs' senses the controlling current.</TT></DT>
+	<DT><TT>Fout  0    4    vs</TT></DT>
+	<DT><TT>rm1   4    0    400</TT></DT>
+	<DT><TT>rm2   4    5    200</TT></DT>
+	<DT><TT>cm1   5    0    1n</TT></DT>
+	<DT><TT>gm1   6 0 5 0 0.15</TT></DT>
+	<DT><TT>rld   6 0 100</TT></DT>
+	<DT><TT>* Solves for voltage across rld/vin</TT></DT>
+	<DT><TT>solve 6 0 1 0</TT></DT>
+</DL>
+<H3><FONT COLOR="#DD0066">Notes</FONT></H3>
+<p>Some of the example circuit files have an 'answer' keyword in them along with an
+equation. These are used to verify the operation of the solving code. If the 'Test mode'
+checkbox is used, these files are read in, one at a time, solved, and then that answer
+is compared with the answer in the file. Obviously, there should be no mismatches.
+</body>
+</html>
+

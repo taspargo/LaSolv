@@ -1,0 +1,17 @@
+;
+; tests emitter follower output impedance
+; Added Cpi
+r1 22 0 1k
+r2 22 44 500
+cpi 22 44 10p
+g 0 44 22 44 0.125
+iin 44 0 1
+
+solve 44 0 iin
+
+output test
+
+answer
+cpi*r1*r2*s + r1 + r2
+——————————
+cpi*r2*s + g*r2 + 1

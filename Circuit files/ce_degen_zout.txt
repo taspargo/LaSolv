@@ -1,0 +1,12 @@
+;
+; output imp of a CE with degen and AC bypassing
+Ro 1 0
+Gm 0 2 1 2
+Re 2 3
+Cc 3 0
+Rp 3 0
+iout 3 0
+
+solve 3 0 iout
+
+output

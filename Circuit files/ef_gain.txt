@@ -1,0 +1,11 @@
+;
+; tests emitter follower gain
+; Added Cpi
+vin 6 0
+rpi 6 4 1k
+cpi 6 4 2p
+gm 0 4 6 4 0.1
+re 4 0 50
+ce 4 0 1p
+freq 100M
+solve 4 0 6 0

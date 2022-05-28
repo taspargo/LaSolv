@@ -1,0 +1,13 @@
+;
+; tests emitter follower gain
+; Added Cpi
+v1 22 0
+rpi 22 44
+cpi 22 44
+gm 0 44 22 44
+re 44 0
+ce 44 0
+
+solve 44 0 22 0
+
+output test

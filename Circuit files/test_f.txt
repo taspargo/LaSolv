@@ -1,0 +1,15 @@
+;
+; another f element test (cccs)
+v1 11 0
+r1 11 22
+vs 22 0
+f1 0 33 vs
+r2 33 0
+solve 33 0 v1
+; note that we are looking for V33/I(v1)…
+; should be (f*r2)/1
+
+answer
+-f1*r2
+———————
+1.0

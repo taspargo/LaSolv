@@ -1,0 +1,14 @@
+;
+; tests vcvs element
+v1 11 0 1
+r4 11 22 50
+r7 0 22 80
+e1 33 0 22 0 10
+rs 33 44 30
+rl 44 0 500
+solve 44 0 11 0
+
+answer
+e1*r7*rl
+———————————————
+r4*rl+r4*rs+r7*rl+r7*rs

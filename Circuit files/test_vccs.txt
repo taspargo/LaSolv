@@ -1,0 +1,14 @@
+;
+; tests vccs element
+v1 11 0
+r1 11 22 2k
+r2 33 22 5k
+r3 33 0 5k
+g1 0 44 22 33 1
+r4 0 44 2k
+solve 44  0 11 0
+
+answer
+g1*r2*r4
+—————
+r1+r2+r3

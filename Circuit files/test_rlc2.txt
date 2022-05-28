@@ -1,0 +1,8 @@
+;
+; tests rlc circuit
+I1 44 0
+v1 11 44
+R1 11 22
+L1 3 22
+C1 3 0
+solve v1 3 22

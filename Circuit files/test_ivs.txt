@@ -1,0 +1,6 @@
+;
+; tests ivs element
+v1 11 0
+r4 11 22
+r7 0 22
+solve 22 0 11 0

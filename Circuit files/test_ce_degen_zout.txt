@@ -1,0 +1,21 @@
+;
+; output imp of a CE with degen and AC bypassing
+Ro 1 0 100
+Rpi 1 2 3000
+Cpi 1 2 33p
+Gm 0 2 1 2 0.125
+Re 2 3 10
+Cc 3 0 10p
+Rp 3 0 100
+iout 3 0
+
+solve 3 0 iout
+
+;subs Gm*Re Beta
+
+output test
+
+answer
+Gm*Re*Rp + Rp
+---------------------------
+Cc*Gm*Re*Rp*s + Cc*Rp*s + Gm*Re + Gm*Rp + 1.0

@@ -1,0 +1,7 @@
+vin 1 0
+ra 1 0
+rb 1 3
+vs 3 0
+fa 4 0 vs
+rx 4 0
+solve 1 0 4 0

@@ -1,0 +1,8 @@
+;
+; tests rcrc circuit
+V1 11 0
+R1 11 22 100
+C1 0 22 2n
+R2 22 33 50
+C2 0 33 4n
+solve  33 0 11 0

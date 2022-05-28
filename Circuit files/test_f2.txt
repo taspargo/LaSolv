@@ -1,0 +1,15 @@
+;
+; tests f element cccs
+; i1 11 0
+v1 11 0
+r1 11 22
+vs 22 0
+f1 0 33 vs
+r2 33 0
+
+solve v1 33 0
+
+answer
+-1
+—————
+f1*r2

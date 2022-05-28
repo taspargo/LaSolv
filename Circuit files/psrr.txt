@@ -1,0 +1,12 @@
+;
+; psrr of an sldp op-amp at high freq.
+V1 1 0
+gm1b 1 5 7 5
+rdssl 5 0
+cdg3 1 5
+ccs 5 0
+r1 7 0
+r2 7 5
+solve 5 0 1 0
+
+output test

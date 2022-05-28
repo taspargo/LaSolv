@@ -1,0 +1,15 @@
+;
+; Zin of an emitter follower
+V1 11 0
+R1 11 22 500
+Cp 22 33 100p
+Rp 33 22 1000
+Rld 33 0 500
+Gm 33 0 22 33 0.1
+solve 33 0 11 0
+
+answer
+Cp*R1*Rp*s + Cp*Rld*Rp*s + Gm*Rld*Rp + R1 + Rld + Rp
+—————————————————————————————————————————————————————————
+Gm*Rp
+

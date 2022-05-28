@@ -1,0 +1,7 @@
+;
+; Simplest circuit for LaSolv
+r1 11 0
+r4 11 22
+r7 0 22
+ix 11 0
+solve 11 0 22 0

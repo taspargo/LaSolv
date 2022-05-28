@@ -1,0 +1,7 @@
+;
+; Test renumbering methods for LaSolv
+r11 11 0
+c12 11 22
+r77 22 0
+ix 22 0
+solve 22 0 11 0

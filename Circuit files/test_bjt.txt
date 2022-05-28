@@ -1,0 +1,25 @@
+;
+; tests simple bipolar model with Re
+; Added Cpi and Rload
+; Solve for the CE gain
+vi 11 0
+rs 11 22 50
+; Gummel-Poon BJT model
+rpi 22 44 400
+cp 22 44 10p
+gm 33 44 22 44 130m
+
+* Emitter degen and peaking, load
+re 44 0 20
+ce 44 55 100p
+*rce 55 0 5
+Rl 0 33 200
+
+solve 33 0 11 0
+
+output
+
+answer
+-Rl*gm*rpi
+————————————————————————————————
+cp*rs*rpi*s+cp*rpi*re*s+gm*rpi*re+rs+rpi+re

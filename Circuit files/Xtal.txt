@@ -1,0 +1,9 @@
+* RLC circuit
+Vin 1 0
+Rx 1 2 500
+Cx 2 3 10f
+Lx 3 4 1m
+*Cc 1 4 1p
+Rl 4 0 500
+solve 4 0 1 0
+output 

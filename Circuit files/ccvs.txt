@@ -1,0 +1,10 @@
+;;
+; tests cccs element
+iin 0 1 1
+ra 1 0 50
+va 1 2 0
+rb 2 0 30
+ha 0 4 va 1
+rc 4 5 60
+rd 5 0 50
+solve 5 0 iin

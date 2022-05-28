@@ -1,0 +1,7 @@
+;
+; tests rlc circuit
+V1 11 0
+R1 11 22
+L1 3 22
+C1 3 0
+solve 11 0 3 0

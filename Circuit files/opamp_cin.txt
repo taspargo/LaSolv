@@ -1,0 +1,13 @@
+;
+; opamp with cap from - input to gnd. opamp has a single pole.
+Vs 11 0
+Ra 11 22
+Ca 22 0
+Rb 22 33
+Ea 44 0 0 22
+Rp 44 45
+Cp 45 0
+Eb 33 0 45 0
+solve 33 0 11 0
+
+output

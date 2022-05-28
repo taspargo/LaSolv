@@ -1,0 +1,16 @@
+;
+; tests simple bipolar model with Re
+; Added Cpi and Rload
+; Solve for the CE gain
+vi 11 0
+rs 11 22
+rpi 22 44
+cp 22 44
+gm 33 44 22 44
+
+re 44 0
+Rl 0 33
+
+solve 33 0 11 0
+
+output
