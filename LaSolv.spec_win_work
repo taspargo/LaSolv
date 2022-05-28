@@ -1,0 +1,37 @@
+# -*- mode: python -*-
+# From 2019 1126, a working Mac version
+import sys
+sys.setrecursionlimit(5000)
+
+block_cipher = None
+
+#pathex=['/Users/Thomas/Programming/LaSolv_main/venv/bin/fwpy'],
+
+a = Analysis(['gui_wx.py'],
+             pathex=['/Users/Thomas/Programming/LaSolv_main/LaSolv_reduced',
+                '/Users/Thomas/.pyenv/versions/3.7.4/bin/'],
+             binaries=[],
+             datas=[],
+             hiddenimports=[],
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=['FixTk', 'tcl', 'tk', 'tkinter', '_tkinter', 'Tkinter', 'Matplotlib', 
+                'hook-matplotlib.backends.py', 'PyQt5', 'QtCore'],
+             cipher=block_cipher,
+             noarchive=False)
+pyz = PYZ(a.pure, a.zipped_data,
+             cipher=block_cipher)
+exe = EXE(pyz,
+          a.scripts,
+          a.binaries,
+          a.zipfiles,
+          a.datas,
+          [],
+          name='LaSolv',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=True,
+          upx=True,
+          runtime_tmpdir=None,
+          console=False,
+          icon='LaSolv_icon.icns')
