@@ -47,7 +47,7 @@ class CGauss(object):
         
         #print("CGauss ctor- m=")
         #self.pprint(self.m)
-        
+
     def elimination(self):
         '''Using Gaussian elimination, turn the square matrix into an upper triangular one.'''
         n = self.m.shape[0]

@@ -298,4 +298,3 @@ def reorderEquations(mat, column):
         return new_mat, new_col
     else:
         return -1, -1
-    

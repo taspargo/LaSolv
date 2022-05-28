@@ -674,5 +674,3 @@ class eqn_solver(object):
         else:
             print(txt)
             sympy.pprint(ans)
-
-

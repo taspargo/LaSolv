@@ -20,7 +20,7 @@ def arange(start, stop, step):
         ans[x] = num 
         num += step
     return ans
-    
+
 def geomSpace(start, stop, length):
     if start < 0:
         print(Support.myName(), "'Start' should be > 0:", start ) 

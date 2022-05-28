@@ -60,9 +60,9 @@ from sys import platform
 import os.path
 import Enums
 
-class LaSolvApp(object):
+class LaSolvApp(wx.App):
     def __init__(self):
-        app = wx.App(False)
+        #app = wx.App(False)
         self.frame = eqs(None, -1, "LaSolv")
         app.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
         #frm = eqs("LaSolv")
@@ -131,58 +131,58 @@ class ButtonPanel(wx.Panel):
         wx.Panel.__init__(parent, *args, **kwargs)
         self.parent = parent
 
-        self.newBtn = wx.Button(self.panel, wx.ID_ANY, "New")
+        self.newBtn = wx.Button(self.parent, wx.ID_ANY, "New")
         self.newBtn.Bind(wx.EVT_BUTTON, self.onNew)
-        self.openBtn = wx.Button(self.panel, wx.ID_ANY, "Open...")
+        self.openBtn = wx.Button(self.parent, wx.ID_ANY, "Open...")
         self.openBtn.Bind(wx.EVT_BUTTON, self.onOpen)
-        self.saveBtn = wx.Button(self.panel, wx.ID_ANY, "Save")
+        self.saveBtn = wx.Button(self.parent, wx.ID_ANY, "Save")
         self.saveBtn.Bind(wx.EVT_BUTTON, self.onSave)
-        self.saveAsBtn = wx.Button(self.panel, wx.ID_ANY, "Save As...")
+        self.saveAsBtn = wx.Button(self.parent, wx.ID_ANY, "Save As...")
         self.saveAsBtn.Bind(wx.EVT_BUTTON, self.onSaveAs)
-        self.solveBtn = wx.Button(self.panel, wx.ID_ANY, "Solve")
+        self.solveBtn = wx.Button(self.parent, wx.ID_ANY, "Solve")
         self.solveBtn.Bind(wx.EVT_BUTTON, self.onSolve)
-        self.quitBtn = wx.Button(self.panel, wx.ID_ANY, "Quit")
+        self.quitBtn = wx.Button(self.parent, wx.ID_ANY, "Quit")
         self.quitBtn.Bind(wx.EVT_BUTTON, self.onQuit)
-        self.empty = wx.StaticText(self.panel, label=' ')
+        self.empty = wx.StaticText(self.parent, label=' ')
         if self.showTestMode:
-            self.testModeBox = wx.CheckBox(self.panel, label='Test Mode')
+            self.testModeBox = wx.CheckBox(self.parent, label='Test Mode')
             self.testModeBox.Bind(wx.EVT_CHECKBOX, self.setTestMode)
         else:
-            self.testModeBox = wx.StaticText(self.panel, wx.ID_ANY, ' ')
+            self.testModeBox = wx.StaticText(self.parent, wx.ID_ANY, ' ')
 
-        self.plotBtn = wx.Button(self.panel, wx.ID_ANY, "Plot")
+        self.plotBtn = wx.Button(self.parent, wx.ID_ANY, "Plot")
         self.plotBtn.Bind(wx.EVT_BUTTON, self.onPlot)
-        from_lbl = wx.StaticText(self.panel, wx.ID_ANY, "Start freq:")
-        self.plot_from = wx.TextCtrl(self.panel, wx.ID_ANY)
-        to_lbl = wx.StaticText(self.panel, wx.ID_ANY, "Stop freq:")
-        self.plot_to = wx.TextCtrl(self.panel, wx.ID_ANY)
+        from_lbl = wx.StaticText(self.parent, wx.ID_ANY, "Start freq:")
+        self.plot_from = wx.TextCtrl(self.parent, wx.ID_ANY)
+        to_lbl = wx.StaticText(self.parent, wx.ID_ANY, "Stop freq:")
+        self.plot_to = wx.TextCtrl(self.parent, wx.ID_ANY)
 
-        # self.fnNPath = wx.StaticText(self.panel, wx.ID_ANY, 130*' ')
-        self.fnNPath = wx.StaticText(self.panel, wx.ID_ANY, 80 * ' ')
+        # self.fnNPath = wx.StaticText(self.parent, wx.ID_ANY, 130*' ')
+        self.fnNPath = wx.StaticText(self.parent, wx.ID_ANY, 80 * ' ')
         font = wx.Font(16, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_ITALIC, wx.FONTWEIGHT_NORMAL)
         self.fnNPath.SetFont(font)
 
-        self.plotFormatBox = wx.RadioBox(self.panel, label='',
+        self.plotFormatBox = wx.RadioBox(self.parent, label='',
                                          choices=Enums.pf_list, style=wx.RA_SPECIFY_ROWS)
         self.plotFormatBox.Bind(wx.EVT_RADIOBOX, self.onPlotFormat)
         self.plotFormatBox.SetSelection(self.plot_format)
 
-        self.dBBox = wx.CheckBox(self.panel, label='dB')
+        self.dBBox = wx.CheckBox(self.parent, label='dB')
         self.dBBox.SetValue(self.use_dB)
         self.enabledBBox(self.plot_format == 0)
         self.dBBox.Bind(wx.EVT_CHECKBOX, self.ondBMode)
 
-        self.spBox = wx.RadioBox(self.panel, label='',
+        self.spBox = wx.RadioBox(self.parent, label='',
                                  choices=Enums.format_sp, style=wx.RA_SPECIFY_ROWS)
         self.spBox.Bind(wx.EVT_RADIOBOX, self.onSP)
         self.enableSPBox(self.plot_format != 0)
 
-        self.alwaysPlotRBox = wx.CheckBox(self.panel, label='Always plot R')
+        self.alwaysPlotRBox = wx.CheckBox(self.parent, label='Always plot R')
         self.alwaysPlotRBox.SetValue(self.alwaysPlotR)
         # self.enabledAlwaysPlotRBox(self.SorP==Enums.format_sp2)
 
-        prgs = wx.StaticText(self.panel, wx.ID_ANY, "Progress")
-        self.gauge = wx.Gauge(self.panel, range=100, size=(200, 20),
+        prgs = wx.StaticText(self.parent, wx.ID_ANY, "Progress")
+        self.gauge = wx.Gauge(self.parent, range=100, size=(200, 20),
                               style=wx.GA_HORIZONTAL)
 
 class eqs(wx.Frame):

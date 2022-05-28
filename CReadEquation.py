@@ -26,7 +26,6 @@ Created on Nov 27, 2016
 import sympy
 import Support
 
-
 class CReadEquation(object):
     '''
     classdocs

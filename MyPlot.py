@@ -14,6 +14,7 @@ import lumpy
 import Enums
 from math import ceil, floor
 
+
 class CanvasPanel(wx.Frame):
     def __init__(self, parent, gui, f_array, m_array, p_array):
         '''

@@ -128,5 +128,3 @@ def myExit(code, errMssg=''):
     input("")
     return code
     #sys.exit(code)
-
-
