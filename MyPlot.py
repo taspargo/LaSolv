@@ -127,3 +127,92 @@ class CanvasPanel(wx.Frame):
             plt.yticks(yt)
         #plt.draw()
         plt.show()
+
+"""1) Define our data :
+
+We insert your data in a list of tuples.
+Each tuple will have two items.
+
+data = [(x1, y1), (x2, y2), (x3, y3), (x4, y4), (x5, y5), (x6, y6)]
+
+2) Create a plotting canvas we create an object of a PlotCanvas as a child of a frame :
+   frame = wx.Frame(self, -1)
+   client = wx.lib.plot.PlotCanvas(frame)
+3) Create a graph There are two classes :
+PolyLine and PolyMarker. PolyLine class defines line graphs.
+Its constructor is :
+PolyLine(list data, wx.Colour colour, integer width, integer style, string legend)
+- data parameter is the data to be displayed.
+- colour defines the colour of the line.
+- width is the width of the pen, used to draw the graph.
+- Possible style flags are wx.Pen styles.
+- legend defines the line legend.
+PolyMarker can be used to create scatter graphs and bar graphs as well.
+Constructor :
+PolyMarker(list data, wx.Colour colour, integer size, wx.Colour fillcolour, integer fillstyle, string markershape, string legend)
+fillstyle is also various wx.Pen styles.
+
+Marker Shapes :
+circle
+dot
+square
+triangle
+triangle_down
+cross
+plus
+
+4) Create a graph container :
+Graph container is a container that holds a graph object and its title and labels.
+PlotGraphics(list objects, string title, string xLabel, string yLabel)
+objects is a list of one or more graph objects
+title - title shown at top of graph
+xLabel - label shown on x-axis
+yLabel - label shown on y-axis
+5) Draw a graph :
+Finally we draw the graph.
+
+client.Draw(gc,  xAxis=(0,15), yAxis=(0,15))
+
+gc is a graph container object. xAxis and yAxis define the range of the axes (info by ZetCode / Jan Bodnar)."""
+
+"""
+import wx
+import wx.lib.plot as plot
+    
+class MyPlot(wx.Dialog):
+    def __init__(self, parent, id, title):
+        wx.Dialog.__init__(self, parent, id, title, size=(180, 280))
+
+        #------------
+
+        icon = wx.Icon("./icons/wxwin.ico")
+        self.SetIcon(icon)
+
+        #------------
+        
+        self.data = [(1,2), (2,3), (3,5), (4,6), (5,8), (6,8), (10,10)]
+
+    def OnLine(self, event):
+        frm = wx.Frame(self, -1, 'Line', size=(600, 450))
+        icon = wx.Icon("./icons/wxwin.ico")
+        frm.SetIcon(icon)
+        
+        pnl = wx.Panel(frm, -1)        
+        pnl.SetBackgroundColour(wx.WHITE)
+
+        #------------
+        
+        client = plot.PlotCanvas(pnl)
+        line = plot.PolyLine(self.data, legend='', colour='pink', width=1)
+        gc = plot.PlotGraphics([line], 'Line Graph', 'X Axis', 'Y Axis')
+        client.Draw(gc,  xAxis= (0,15), yAxis= (0,15))
+
+        #------------
+        
+        mainSizer = wx.BoxSizer(wx.VERTICAL)
+        mainSizer.Add(client, 1, wx.EXPAND | wx.ALL, 10)   
+        pnl.SetSizer(mainSizer)
+
+        #------------
+        
+        frm.Show(True)"""

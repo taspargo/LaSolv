@@ -50,30 +50,15 @@ TODO:
 # Programming/LaSolv_main/LaSolv_wx_2021_1108/
 import wx
 import wx.stc as stc
-import wx.html2
 import engineering_notation as eno
 from sympy import fraction, N
 import configparser
 import eqnSolver
+import UI_Classes as ui
 import Support
 from sys import platform
 import os.path
 import Enums
-
-#class LaSolvApp(wx.App):
-#    def OnInit(self):
-        #app = wx.App(False)
-        #self.frame = eqs(None, -1, "LaSolv")
-        #app.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
-        #frm = eqs("LaSolv")
-        #app.MainLoop()
- #       eqnsFrame = Equations("LaSolv 0.9.3", (50, 60), (800, 500))
- #       eqnsFrame.Show()
- #       self.SetTopWindow(eqnsFrame)
-
-#        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
-
-#        return True
 
 class xmlSTC(stc.StyledTextCtrl):
     def __init__(self, parent):
@@ -86,203 +71,114 @@ class xmlPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.xmlView = xmlSTC(self)
 
-'''
-      Original hierarchy
-                        Frame
-                        panel
-                        Splitter Window
-                        (main_sizer V)
-                    __________|___________
-                    |                    |
-                main_panel        result_panel
-                [main_text]       [result_text]
-                (mn_sizer H)       (rs_sizerH)
-                    |____________________|
-                              |
-                       GridBagSizer
-        Open     Save    SaveAs     Solve Plot     O Mag/Angle |_| dB
-        Quit                        Start xxxxx    O Re/Im      O Series
-        Progress xxxxxxxxxxxxxxx     Stop xxxxx    O RLC        O Parallel
-        Messages xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-        '''
-
-class CircuitPanel(wx.Panel):
-    """Holds the circuit text"""
-    def __init__(self, parent, *args, **kwargs):
-        wx.Panel.__init__(self, parent, *args, **kwargs)
-        self.parent = parent
-
-        # To detect when the text has changed
-        #self.splitter = wx.SplitterWindow(self.panel, wx.ID_ANY)
-        #self.splitter.SetMinimumPaneSize(200)
-
-        self.circuit_text = wx.TextCtrl(self, style=wx.TE_MULTILINE)
-       # mn_sizer = wx.BoxSizer(wx.HORIZONTAL)
-       # mn_sizer.Add(self.circuit_text, 1, wx.EXPAND)
-       # self.SetSizer(mn_sizer)
-
-        # Add this to the frame class
-        #self.circuit_text.Bind(wx.EVT_KEY_DOWN, self.circuit_text.onKeyPress)
-
-class ResultPanel(wx.Panel):
-    """Holds the results text"""
-    def __init__(self, parent, *args, **kwargs):
-        wx.Panel.__init__(self, parent, *args, **kwargs)
-        self.parent = parent
-
-        self.result_text = wx.TextCtrl(self, style=wx.TE_READONLY|wx.TE_MULTILINE)
-        self.result_text.SetEditable(False)
-       # rs_sizer = wx.BoxSizer(wx.HORIZONTAL)
-       # rs_sizer.Add(self.result_text, 1, wx.EXPAND)
-       # self.SetSizer(rs_sizer)
-
-class TextPanel(wx.SplitterWindow):
-    """Holds the circuit and results panels"""
-    def __init__(self, parent, *args, **kwargs):
-        wx.SplitterWindow.__init__(self, parent, *args, **kwargs)
-        self.parent = parent
-
-        self.CktPanel = CircuitPanel(self)
-        self.ResPanel = ResultPanel(self)
-        self.SplitVertically(self.CktPanel, self.ResPanel)
-        self.SetSashGravity(0.25)
-        self.SetSashPosition(150, redraw=True)
-
-        #main_panel.SetSizer(mn_sizer)
-       # main_sizer.Add(self.splitter, 1, wx.EXPAND | wx.ALL, 5)
-    def GetCircuitText(self):
-        return self.GetCircuitText()
-
-    def SetCircuitText(self, text):
-        self.SetCircuitText(text)
-
-    def SetResultText(self, text):
-        self.SetResultText(text)
-
-class ButtonPanel(wx.Panel):
-    """The buttons and radioButton are here"""
-    def __init__(self, parent, *args, **kwargs):
-        wx.Panel.__init__(parent, *args, **kwargs)
-        self.parent = parent
-
-        self.newBtn = wx.Button(self.parent, wx.ID_ANY, "New")
-        self.newBtn.Bind(wx.EVT_BUTTON, self.parent.onNew)
-        self.openBtn = wx.Button(self.parent, wx.ID_ANY, "Open...")
-        self.openBtn.Bind(wx.EVT_BUTTON, self.parent.onOpen)
-        self.saveBtn = wx.Button(self.parent, wx.ID_ANY, "Save")
-        self.saveBtn.Bind(wx.EVT_BUTTON, self.parent.onSave)
-        self.saveAsBtn = wx.Button(self.parent, wx.ID_ANY, "Save As...")
-        self.saveAsBtn.Bind(wx.EVT_BUTTON, self.parent.onSaveAs)
-        self.solveBtn = wx.Button(self.parent, wx.ID_ANY, "Solve")
-        self.solveBtn.Bind(wx.EVT_BUTTON, self.parent.onSolve)
-        self.quitBtn = wx.Button(self.parent, wx.ID_ANY, "Quit")
-        self.quitBtn.Bind(wx.EVT_BUTTON, self.parent.onQuit)
-        self.empty = wx.StaticText(self.parent, label=' ')
-        if self.parent.showTestMode:
-            self.testModeBox = wx.CheckBox(self.parent, label='Test Mode')
-            self.testModeBox.Bind(wx.EVT_CHECKBOX, self.parent.setTestMode)
-        else:
-            self.testModeBox = wx.StaticText(self.parent, wx.ID_ANY, ' ')
-
-        self.plotBtn = wx.Button(self.parent, wx.ID_ANY, "Plot")
-        self.plotBtn.Bind(wx.EVT_BUTTON, self.parent.onPlot)
-        from_lbl = wx.StaticText(self.parent, wx.ID_ANY, "Start freq:")
-        self.plot_from = wx.TextCtrl(self.parent, wx.ID_ANY)
-        to_lbl = wx.StaticText(self.parent, wx.ID_ANY, "Stop freq:")
-        self.plot_to = wx.TextCtrl(self.parent, wx.ID_ANY)
-
-        # self.fnNPath = wx.StaticText(self.parent, wx.ID_ANY, 130*' ')
-        self.fnNPath = wx.StaticText(self.parent, wx.ID_ANY, 80 * ' ')
-        font = wx.Font(16, wx.FONTFAMILY_ROMAN, wx.FONTSTYLE_ITALIC, wx.FONTWEIGHT_NORMAL)
-        self.fnNPath.SetFont(font)
-
-        self.plotFormatBox = wx.RadioBox(self.parent, label='',
-                                         choices=Enums.pf_list, style=wx.RA_SPECIFY_ROWS)
-        self.plotFormatBox.Bind(wx.EVT_RADIOBOX, self.parent.onPlotFormat)
-        self.plotFormatBox.SetSelection(self.parent.plot_format)
-
-        self.dBBox = wx.CheckBox(self.parent, label='dB')
-        self.dBBox.SetValue(self.parent.use_dB)
-        self.dBBox.Enable(self.parent.plot_format == 0)
-        self.dBBox.Bind(wx.EVT_CHECKBOX, self.parent.ondBMode)
-
-        self.spBox = wx.RadioBox(self.parent, label='',
-                                 choices=Enums.format_sp, style=wx.RA_SPECIFY_ROWS)
-        self.spBox.Bind(wx.EVT_RADIOBOX, self.parent.onSP)
-        self.spBox.Enable(self.parent.plot_format != 0)
-
-        self.alwaysPlotRBox = wx.CheckBox(self.parent, label='Always plot R')
-        self.alwaysPlotRBox.SetValue(self.parent.alwaysPlotR)
-        # self.enabledAlwaysPlotRBox(self.SorP==Enums.format_sp2)
-
-        prgs = wx.StaticText(self.parent, wx.ID_ANY, "Progress")
-        self.gauge = wx.Gauge(self.parent, range=100, size=(200, 20),
-                              style=wx.GA_HORIZONTAL)
-
 class Equations(wx.Frame):
-    def __init__(self, parent, wxid, title):
+    def __init__(self, ID=wx.ID_ANY, title="LaSolv 0.9.5"):
         """
         Constructor
         """
-        wx.Frame.__init__(self, None, -1, title, pos=(20,20), size=(800,400))
+        wx.Frame.__init__(self, None, ID, title, pos=(20,20), size=(800,400))
         #wx.Frame.__init__(self, parent, wxid, title, size=(800,400))
 
-        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+        self.plot_format = 0
+        self.use_dB = True
+        self.use_dB = True
+        self.SorP = 0
+        self.alwaysPlotR = True
+        self.runTestMode = False
+        self.showTestMode= True
 
-        self.menus = TheMenus(self)
+        self.textChanged = False
+        self.numer = 0.0
+        self.denom = 1.0
 
-        #self.fileDir= '/Users/Thomas/Programming/Python/Wing_Projects/LaSolv/Examples/'
         self.fileDir = os.getcwd()
         self.configFN = 'LaSolv.ini'
-        self.usePlotting = True
-        self.showTestMode = True
 
-        self.TextPanel = TextPanel(self)
-        self.ButtonPanel = ButtonPanel(self)
+        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
+        self.getConfig()
+
+        self.menubar = self.buildMenu()
+
+        self.topPanel = wx.Panel(self, wx.ID_ANY)
+
+        self.TextPanel = ui.TextPanel(self)
+        self.TextPanel.CktPanel.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
+        self.ButtonPanel = ui.ButtonPanel(self)
         self.fnNPath = self.ButtonPanel.fnNPath
+        self.TextPanel.CktPanel.circuit_text.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
 
         ud_sizer = wx.BoxSizer(wx.VERTICAL)
-        ud_sizer.Add(self.TextPanel, wx.ALIGN_CENTER_VERTICAL, wx.EXPAND)
-        ud_sizer.Add(self.ButtonPanel, wx.ALIGN_CENTER_VERTICAL, wx.EXPAND)
+        ud_sizer.Add(self.TextPanel, 2, wx.EXPAND | wx.ALL, 5)
+        ud_sizer.Add(self.ButtonPanel, 1, wx.EXPAND | wx.ALL, 5)
+        #self.SetSizer(ud_sizer)
+        self.topPanel.SetSizerAndFit(ud_sizer)
+        self.Show()
 
         #self.panel = wx.Panel(self, wx.ID_ANY)
         #self.panel = xmlPanel(self, wx.ID_ANY)
         self.plotFrame = None
         self.plotPanel = None
 
-        self.getConfig()
-
         self.eqSolver = eqnSolver.eqn_solver()
-        self.initVar()
 
-    def GetPlotFrom(self):
+    def getPlotFrom(self):
         return self.ButtonPanel.plot_from.GetValue()
 
-    def GetPlotTo(self):
+    def getPlotTo(self):
         return self.ButtonPanel.plot_to.GetValue()
 
-    def GetSorP(self):
+    def getSorP(self):
         return self.ButtonPanel.spBox.GetSelection()
 
-    def GetAlwaysPlotR(self):
+    def getAlwaysPlotR(self):
         return self.ButtonPanel.alwaysPlotRBox.GetValue()
 
-    def GetUseDB(self):
+    def getUseDB(self):
         return self.ButtonPanel.dBBox.GetValue()
 
-    def SetUseDB(self, d):
-        self.ButtonPanel.dBBox.SetValue(d)
+    def getPlotFormat(self):
+        return self.plot_format
 
+    def buildMenu(self):
+        self.file_menu = wx.Menu()
+        about_item = self.file_menu.Append(wx.ID_ABOUT, "About LaSolv", "INFO")
+        self.Bind(wx.EVT_MENU, self.onAbout, about_item)
+        self.file_menu.AppendSeparator()
+        quit_item = self.file_menu.Append(wx.ID_EXIT, "&Quit")
+        self.Bind(wx.EVT_MENU, self.onQuit, quit_item)
 
-    # def _init_file_menu(self):
-    #     """ Create the "File" menu items. """
-    #     menu = wx.Menu()
-    #     menu.Append(205, 'E&xit', 'Enough of this already!')
-    #     self.Bind(wx.EVT_MENU, self.OnFileExit, id=205)
-    #     self.mainmenu.Append(menu, '&File')
+        new_item = self.file_menu.Append(wx.ID_NEW, "")
+        self.Bind(wx.EVT_MENU, self.onNew, new_item)
+        open_item = self.file_menu.Append(wx.ID_OPEN, "")
+        self.Bind(wx.EVT_MENU, self.onOpen, open_item)
+        save_item = self.file_menu.Append(wx.ID_SAVE, "")
+        self.Bind(wx.EVT_MENU, self.onSave, save_item)
+        saveas_item = self.file_menu.Append(wx.ID_SAVEAS, "")
+        self.Bind(wx.EVT_MENU, self.onSaveAs, saveas_item)
 
-    def OnFileExit(self, event):
-        self.Close()
+        # The edit menu items seem to work without any extra code.
+        edit_menu = wx.Menu()
+        edit_menu.Append(wx.ID_COPY, "")
+        edit_menu.Append(wx.ID_CUT, "")
+        edit_menu.Append(wx.ID_PASTE, "")
+
+        solve_menu = wx.Menu()
+        solve_item = solve_menu.Append(wx.ID_ANY, "&Solve\tCTRL+e")
+        self.Bind(wx.EVT_MENU, self.onSolve, solve_item)
+        plot_item = solve_menu.Append(wx.ID_ANY, "Plot\tCTRL+T")
+        self.Bind(wx.EVT_MENU, self.onPlot, plot_item)
+
+        help_menu = wx.Menu()
+        help_item = help_menu.Append(wx.ID_ANY, "Help")
+        self.Bind(wx.EVT_MENU, self.onHelp, help_item)
+
+        menu_bar = wx.MenuBar()
+        menu_bar.Append(self.file_menu, "&File")
+        menu_bar.Append(edit_menu, "Edit")
+        menu_bar.Append(solve_menu, "Solve")
+        menu_bar.Append(help_menu, "Help")
+        self.SetMenuBar(menu_bar)
+        return menu_bar
 
     def getConfig(self):
         config = configparser.ConfigParser()
@@ -305,20 +201,39 @@ class Equations(wx.Frame):
         with open(self.configFN, 'w') as configfile:
             configP.write(configfile)
 
-    def initVar(self):
-        self.fullPath = None
-        self.theFile = None
-        self.plot_format = 0
-        self.use_dB = True
-        #self.SorP = 0
-        #self.alwaysPlotR = True
-        self.runTestMode = False
-        self.textChanged = False
-        self.filename = ''
-        self.dirname = ''
-        self.numer = 0.0
-        self.denom = 0.0
+    # Guarantees that some filetype extension is present, if none is passed with
+    # the filename, '.txt' is used.
+    def setFileName(self, str):
+        suffix = ".txt"
+        if '.' in str[-5:-3]:
+            suffix = ""
+        self.fnNPath = str+suffix
+        #self.fnNPath = os.path.join(self.fullPath, self.filename)
 
+    def setPlotFormat(self, fmt):
+        self.plot_format = fmt
+        self.onPlotFormat(0)
+
+    def setSorP(self, sp):
+        self.SorP = sp
+
+    def setUseDB(self, db):
+        self.use_dB = db
+
+    def setAlwaysUseR(self, r):
+        self.ButtonPanel.alwaysPlotRBox.SetValue(r)
+
+    def enable_dBBox(self, flag):
+        if flag:
+            self.ButtonPanel.dBBox.Enable()
+        else:
+            self.ButtonPanel.dBBox.Disable()
+
+    def enableSPBox(self, flag):
+        if flag:
+            self.ButtonPanel.spBox.Enable()
+        else:
+            self.ButtonPanel.spBox.Disable()
 
 #####################
 # Option Callbacks
@@ -332,7 +247,7 @@ class Equations(wx.Frame):
 
     # If format set to mag/ang:
     #    Enable the dBBox.
-    #    Disable the s/p radiobuttons
+    #    Disable the s/p radio buttons
     # If format is set to Re/Im or RLC:
     #    Enable the series/parallel box.
     #    Disable the dBBox
@@ -340,32 +255,19 @@ class Equations(wx.Frame):
         #self.plot_format = self.plotFormatBox.GetSelection()
         #print('onPlotFormat: plot_format=', self.plot_format)
         if self.plot_format == 0:
-            self.enabledBBox(True)
+            self.enable_dBBox(True)
             self.enableSPBox(False)
         else:
-            self.enabledBBox(False)
+            self.enable_dBBox(False)
             self.enableSPBox(True)
         if self.eqSolver.getPlotFrame() is not None:
             self.onPlot(event, False)
-
 
     def ondBMode(self, event):
         cb = event.GetEventObject()
         self.use_dB = cb.GetValue()
         if self.eqSolver.getPlotFrame() is not None:
             self.onPlot(event, False)
-
-    def enabledBBox(self, flag):
-        if flag:
-            self.ButtonPanel.dBBox.Enable()
-        else:
-            self.ButtonPanel.dBBox.Disable()
-
-    def enableSPBox(self, flag):
-        if flag:
-            self.ButtonPanel.spBox.Enable()
-        else:
-            self.ButtonPanel.spBox.Disable()
 
     def onSP(self, event):
         if self.eqSolver.getPlotFrame() is not None:
@@ -389,9 +291,9 @@ class Equations(wx.Frame):
 #######################
     def onAbout(self, event):
         if platform == 'win32':
-            dlg = wx.MessageDialog(self, "LaSolv 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
+            dlg = wx.MessageDialog(self, "LaSolv Windows 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
         else:
-            dlg = wx.MessageDialog(self, "LaSolv 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
+            dlg = wx.MessageDialog(self, "LaSolv Mac 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -431,29 +333,27 @@ class Equations(wx.Frame):
             self.readFile()
 
     def onPlot(self, event, solveFirst=True):
-        #if self.textChanged:
-        if 1:
-            if solveFirst:
-                self.onSolve(event)
-                self.onPlot(event, False)
-            #if self.eqSolver.getEvalAnswer() is not None:
-            if self.eqSolver.allValuesDefined():
-                if self.GetPlotFrom() == '' or self.GetPlotTo() == '':
-                    f_start = f_stop = -1
-                else:
-                    f_start = float(eno.EngNumber(self.GetPlotFrom()))
-                    f_stop = float(eno.EngNumber(self.GetPlotTo()))
-                    if f_start > f_stop:
-                        self.fnNPath.SetLabel('Starting frequency is > stop frequency')
-                        return
-                if self.eqSolver.getPlotFrame() is not None:
-                    self.eqSolver.closePlot()
-                err_txt = self.eqSolver.eqnPlot(f_start, f_stop, self.updateProgress,
-                                                self.plot_format, self.GetUseDB(), self.GetSorP() )
-                if err_txt != "":
-                    self.fnNPath.SetLabel(err_txt)
+        if solveFirst:
+            self.onSolve(event)
+            self.onPlot(event, False)
+        #if self.eqSolver.getEvalAnswer() is not None:
+        if self.eqSolver.allValuesDefined():
+            if self.GetPlotFrom() == '' or self.GetPlotTo() == '':
+                f_start = f_stop = -1
             else:
-                self.fnNPath.SetLabel('All components (except v, i) must have a value in order to plot')
+                f_start = float(eno.EngNumber(self.GetPlotFrom()))
+                f_stop = float(eno.EngNumber(self.GetPlotTo()))
+                if f_start > f_stop:
+                    self.fnNPath.SetLabel('Starting frequency is > stop frequency')
+                    return
+            if self.eqSolver.getPlotFrame() is not None:
+                self.eqSolver.closePlot()
+            err_txt = self.eqSolver.eqnPlot(f_start, f_stop, self.updateProgress,
+                                            self.plot_format, self.getUseDB(), self.getSorP() )
+            if err_txt != "":
+                self.fnNPath.SetLabel(err_txt)
+        else:
+            self.fnNPath.SetLabel('All components (except v, i) must have a value in order to plot')
 
     def onQuit(self, event):
         if self.textChanged:
@@ -462,7 +362,12 @@ class Equations(wx.Frame):
             print("onQuit: eqSolver.closePlot()")
             self.eqSolver.closePlot()
         print("onQuit: Destroy")
-        self.Close()
+        self.ButtonPanel.Close(True)
+        self.TextPanel.CktPanel.Close(True)
+        self.TextPanel.ResPanel.Close(True)
+        self.TextPanel.Close(True)
+        self.menubar.Close(True)
+        self.Close(True)
         #wx.CallAfter(self.Destroy)
 
     def onSave(self, event):
@@ -555,7 +460,7 @@ class Equations(wx.Frame):
 # Text Callbacks, setters and getters
 ########################################
     def getText(self):
-        return self.TextPanel.GetCircuitText()
+        return self.TextPanel.getCircuitText()
 
     def setTextChangeFlag(self, flg):
         self.textChanged = flg
@@ -563,10 +468,10 @@ class Equations(wx.Frame):
             print(Support.myName(), 'textChanged=', self.textChanged)
 
     def setCircuitText(self, txt):
-        self.TextPanel.SetCircuitText(txt)
+        self.TextPanel.setCircuitText(txt)
 
     def setResultText(self, txt):
-        self.TextPanel.SetResultText(txt)
+        self.TextPanel.setResultText(txt)
 
     ## Take a sympy numer, denom and convert to a string expression like:
     ## "numer
@@ -635,70 +540,13 @@ class Equations(wx.Frame):
 
         dlg.Destroy()
 
-class TheMenus(wx.Menu):
-    def __init__(self, parent, *args, **kwargs):
-        wx.Menu.__init__(self, *args, **kwargs)
-        self.parent = parent
-
-        self.file_menu = wx.Menu()
-        about_item = self.file_menu.Append(wx.ID_ABOUT, "About LaSolv", "INFO")
-        self.Bind(wx.EVT_MENU, self.parent.onAbout, about_item)
-        self.file_menu.AppendSeparator()
-        quit_item = self.file_menu.Append(wx.ID_EXIT, "&Quit")
-        self.Bind(wx.EVT_MENU, self.parent.onQuit, quit_item)
-
-        new_item = self.file_menu.Append(wx.ID_NEW, "")
-        self.Bind(wx.EVT_MENU, self.parent.onNew, new_item)
-        open_item = self.file_menu.Append(wx.ID_OPEN, "")
-        self.Bind(wx.EVT_MENU, self.parent.onOpen, open_item)
-        save_item = self.file_menu.Append(wx.ID_SAVE, "")
-        self.Bind(wx.EVT_MENU, self.parent.onSave, save_item)
-        saveas_item = self.file_menu.Append(wx.ID_SAVEAS, "")
-        self.Bind(wx.EVT_MENU, self.parent.onSaveAs, saveas_item)
-
-        # The edit menu items seem to work without any extra code.
-        edit_menu = wx.Menu()
-        edit_menu.Append(wx.ID_COPY, "")
-        edit_menu.Append(wx.ID_CUT, "")
-        edit_menu.Append(wx.ID_PASTE, "")
-
-        solve_menu = wx.Menu()
-        solve_item = solve_menu.Append(wx.ID_ANY, "&Solve\tCTRL+e")
-        self.Bind(wx.EVT_MENU, self.parent.onSolve, solve_item)
-        plot_item = solve_menu.Append(wx.ID_ANY, "Plot\tCTRL+T")
-        self.Bind(wx.EVT_MENU, self.parent.onPlot, plot_item)
-
-        help_menu = wx.Menu()
-        help_item = help_menu.Append(wx.ID_ANY, "Help")
-        self.Bind(wx.EVT_MENU, self.parent.onHelp, help_item)
-
-        menu_bar = wx.MenuBar()
-        menu_bar.Append(self.file_menu, "&File")
-        menu_bar.Append(edit_menu, "Edit")
-        menu_bar.Append(solve_menu, "Solve")
-        menu_bar.Append(help_menu, "Help")
-        self.parent.SetMenuBar(menu_bar)
-        #self.parent.CreateStatusBar(1)
-        #self.parent.SetStatusText(wx.wxT("Still LaSolv"))
-
-class HtmlHelpWindow(wx.Frame):
-    def __init__(self, parent, title, pth): 
-        wx.Frame.__init__(self, parent, -1, title, size = (600,400)) 
-        html = wx.html2.WebView.New(self)
-
-        if "gtk2" in wx.PlatformInfo: 
-            html.SetStandardFonts() 
-        with open(pth, 'r') as file:
-            html_str = file.read()
-        html.SetPage(html_str,"")
-
 #def run_lasolv():
 #    LaSolvApp()
 
 if __name__ == '__main__':
     app = wx.App()
     #eqns = Equations("LaSolv", (20, 30), (600, 800))
-    eqns = Equations("LaSolv")
+    eqns = Equations()
     eqns.Show()
     app.MainLoop()
     #run_lasolv()
