@@ -58,7 +58,6 @@ import UI_Classes as ui
 import Support
 from sys import platform
 import os.path
-import Enums
 
 class xmlSTC(stc.StyledTextCtrl):
     def __init__(self, parent):
@@ -71,73 +70,106 @@ class xmlPanel(wx.Panel):
         wx.Panel.__init__(self, parent)
         self.xmlView = xmlSTC(self)
 
+def formFileName(fn):
+    suffix = ".txt"
+    if '.' in fn[-5:-3]:
+        suffix = ""
+    (pth, fname) = os.path.split(fn)
+    return fname+suffix
+
 class Equations(wx.Frame):
     def __init__(self, ID=wx.ID_ANY, title="LaSolv 0.9.5"):
         """
         Constructor
         """
-        wx.Frame.__init__(self, None, ID, title, pos=(20,20), size=(800,400))
-        #wx.Frame.__init__(self, parent, wxid, title, size=(800,400))
+        wx.Frame.__init__(self, None, ID, title, pos=(20,20), size=(800, 400))
 
-        self.plot_format = 0
-        self.use_dB = True
-        self.use_dB = True
-        self.SorP = 0
-        self.alwaysPlotR = True
-        self.runTestMode = False
-        self.showTestMode= True
+        #self.plot_format = 0
+        #self.use_dB = True
+        #self.SorP = 0
+        #self.alwaysPlotR = True
+        #self.runTestMode = False
+        self.fnNPath = ''
+        self.showTestMode = True
 
         self.textChanged = False
         self.numer = 0.0
         self.denom = 1.0
-
-        self.fileDir = os.getcwd()
+        self.fnpFile = "circuit.txt"
+        self.fnpPath = "~/Programming/Python/LaSolv_support/Examples"
+        self.homeDir = os.getcwd()
+        self.eqSetFullPath(self.fnpPath, self.fnpFile)
         self.configFN = 'LaSolv.ini'
-
-        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
         self.getConfig()
 
-        self.menubar = self.buildMenu()
+        self.locale = wx.Locale(wx.LANGUAGE_ENGLISH)
 
         self.topPanel = wx.Panel(self, wx.ID_ANY)
 
         self.TextPanel = ui.TextPanel(self)
-        self.TextPanel.CktPanel.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
+        #self.TextPanel.CktPanel.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
         self.ButtonPanel = ui.ButtonPanel(self)
-        self.fnNPath = self.ButtonPanel.fnNPath
         self.TextPanel.CktPanel.circuit_text.Bind(wx.EVT_KEY_DOWN, self.onKeyPress)
 
-        ud_sizer = wx.BoxSizer(wx.VERTICAL)
-        ud_sizer.Add(self.TextPanel, 2, wx.EXPAND | wx.ALL, 5)
-        ud_sizer.Add(self.ButtonPanel, 1, wx.EXPAND | wx.ALL, 5)
-        #self.SetSizer(ud_sizer)
-        self.topPanel.SetSizerAndFit(ud_sizer)
+        self.ud_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.ud_sizer.Add(self.TextPanel, 1,   wx.ALL, 5)
+        self.ud_sizer.Add(self.ButtonPanel, 1,   wx.ALL, 5)
+
+        self.topPanel.SetSizerAndFit(self.ud_sizer)
         self.Show()
 
-        #self.panel = wx.Panel(self, wx.ID_ANY)
-        #self.panel = xmlPanel(self, wx.ID_ANY)
+        self.menubar = self.buildMenu()
+
         self.plotFrame = None
         self.plotPanel = None
 
         self.eqSolver = eqnSolver.eqn_solver()
 
-    def getPlotFrom(self):
-        return self.ButtonPanel.plot_from.GetValue()
+    def initVar(self):
+        self.eqSetFilenameNPath('')
+        self.eqSetTestMode(True)
+        self.eqSetResultText('')
+        self.eqSetCircuitText('')
 
-    def getPlotTo(self):
-        return self.ButtonPanel.plot_to.GetValue()
+        self.textChanged = False
+        self.numer = 0.0
+        self.denom = 1.0
+        self.ButtonPanel.uiSetInitModes()
+        if self.plotPanel:
+            self.plotPanel.closeFigure()
+        if self.plotFrame:
+            self.plotFrame.Close()
 
-    def getSorP(self):
-        return self.ButtonPanel.spBox.GetSelection()
+    def eqGetPlotFrom(self):
+        return self.ButtonPanel.uiGetPlotFrom()
 
-    def getAlwaysPlotR(self):
-        return self.ButtonPanel.alwaysPlotRBox.GetValue()
+    def eqGetPlotTo(self):
+        return self.ButtonPanel.uiGetPlotTo()
 
-    def getUseDB(self):
-        return self.ButtonPanel.dBBox.GetValue()
+    def eqGetSorP(self):
+        return self.ButtonPanel.uiGetSorPMode()
 
-    def getPlotFormat(self):
-        return self.plot_format
+    def eqGetAlwaysPlotR(self):
+        return self.ButtonPanel.uiGetAlwaysPlotRMode()
+
+    def eqGetDBMode(self):
+        return self.ButtonPanel.uiGetDBMode()
+
+    def eqGetPlotFormat(self):
+        return self.ButtonPanel.uiGetPlotFormat()
+
+    def eqSetAlwaysPlotRMode(self, rm):
+        self.ButtonPanel.alwaysPlotRBox.SetValue(rm)
+
+    def eqSetFilenameNPath(self, fnp):
+        """Assumes the filename suffix is already checked."""
+        self.fnNPath = fnp
+        (self.fnpPath, self.fnpFile) = os.path.split(fnp)
+        self.fnpFile = formFileName(self.fnpFile)
+
+    def eqSetFullPath(self, pth, fn):
+        self.fnpPath = pth
+        self.fnNPath = os.path.join(pth, formFileName(fn))
 
     def buildMenu(self):
         self.file_menu = wx.Menu()
@@ -185,65 +217,61 @@ class Equations(wx.Frame):
         if os.path.exists(self.configFN):
             config.read(self.configFN)
             if 'DEFAULT' in config:
+                print("getConfig: ")
                 print(config.keys())
-                self.fileDir = '/Users/Thomas/'
-                #self.fileDir= config['cktDir']
+                self.homeDir = '~'
             else:
                 # DEFAULT s/b in the config file, so maybe it's corrupted?
+                print("getConfig: config exists but no DEFAULT line; creating new config ")
                 self.createConfig(config)
         else:
             # No config exists, create it
+            print("getConfig: creating a config")
             self.createConfig(config)
 
     def createConfig(self, configP):
         # set ckt directory to be the dir LaSolv is in unless the user changes it.
-        configP['DEFAULT'] = {'cktDir': self.fileDir}
+        configP['DEFAULT'] = {'cktDir': self.homeDir}
         with open(self.configFN, 'w') as configfile:
             configP.write(configfile)
 
     # Guarantees that some filetype extension is present, if none is passed with
     # the filename, '.txt' is used.
-    def setFileName(self, str):
-        suffix = ".txt"
-        if '.' in str[-5:-3]:
-            suffix = ""
-        self.fnNPath = str+suffix
-        #self.fnNPath = os.path.join(self.fullPath, self.filename)
+    # Input: filename or path+filename.
+    # Output: filename with '.txt' at the end
 
-    def setPlotFormat(self, fmt):
-        self.plot_format = fmt
-        self.onPlotFormat(0)
+    def eqSetPlotFormat(self, fmt):
+        self.ButtonPanel.uiSetPlotFormat(fmt)
 
-    def setSorP(self, sp):
+    def eqSetSorPMode(self, sp):
         self.SorP = sp
 
-    def setUseDB(self, db):
+    def eqSetDBMode(self, db):
         self.use_dB = db
 
-    def setAlwaysUseR(self, r):
-        self.ButtonPanel.alwaysPlotRBox.SetValue(r)
-
-    def enable_dBBox(self, flag):
-        if flag:
-            self.ButtonPanel.dBBox.Enable()
-        else:
-            self.ButtonPanel.dBBox.Disable()
-
-    def enableSPBox(self, flag):
-        if flag:
-            self.ButtonPanel.spBox.Enable()
-        else:
-            self.ButtonPanel.spBox.Disable()
+    # def setAlwaysUseR(self, r):
+    #     self.ButtonPanel.alwaysPlotRBox.SetValue(r)
+    #
+    # def enable_dBBox(self, flag):
+    #     if flag:
+    #         self.ButtonPanel.dBBox.Enable()
+    #     else:
+    #         self.ButtonPanel.dBBox.Disable()
+    #
+    # def enableSPBox(self, flag):
+    #     if flag:
+    #         self.ButtonPanel.spBox.Enable()
+    #     else:
+    #         self.ButtonPanel.spBox.Disable()
 
 #####################
 # Option Callbacks
 #####################
-    def setTestMode(self, event):
-        cb = event.GetEventObject()
-        self.runTestMode = cb.GetValue()
+    def eqSetTestMode(self, tm):
+        self.ButtonPanel.uiSetTestMode(tm)
 
-    def getTestMode(self):
-        return self.runTestMode
+    def eqGetTestMode(self):
+        return self.ButtonPanel.uiGetTestMode()
 
     # If format set to mag/ang:
     #    Enable the dBBox.
@@ -252,30 +280,39 @@ class Equations(wx.Frame):
     #    Enable the series/parallel box.
     #    Disable the dBBox
     def onPlotFormat(self, event):
-        #self.plot_format = self.plotFormatBox.GetSelection()
+        #self.plot_format = self.eqGetPlotFormat()
         #print('onPlotFormat: plot_format=', self.plot_format)
-        if self.plot_format == 0:
-            self.enable_dBBox(True)
-            self.enableSPBox(False)
-        else:
-            self.enable_dBBox(False)
-            self.enableSPBox(True)
+        #cb = event.GetEventObject()
+        #pfVal = event.GetSelection()
+        pfVal = self.eqGetPlotFormat()
+        self.eqSetPlotFormat(pfVal)
+        self.ButtonPanel.uiSet_dBBoxEnabled(pfVal)
+        self.ButtonPanel.uiSetAlwaysPlotREnabled(pfVal)
         if self.eqSolver.getPlotFrame() is not None:
             self.onPlot(event, False)
 
     def ondBMode(self, event):
         cb = event.GetEventObject()
-        self.use_dB = cb.GetValue()
+        #self.use_dB = cb.GetValue()
+        self.eqSetDBMode(cb.GetValue())
         if self.eqSolver.getPlotFrame() is not None:
             self.onPlot(event, False)
 
     def onSP(self, event):
+        self.eqSetSorPMode(cb.GetValue())
         if self.eqSolver.getPlotFrame() is not None:
             self.onPlot(event, False)
 
     def onAlwaysPlotR(self, event):
+        cb = event.GetEventObject()
+        self.eqSetAlwaysPlotRMode(cb.GetValue())
         if self.eqSolver.getPlotFrame() is not None:
-            pass
+            self.onPlot(event, False)
+
+    def setTextChangeFlag(self, flg):
+        self.textChanged = flg
+        if Support.gVerbose > 9:
+            print(Support.myName(), 'textChanged=', self.textChanged)
 
 ########################
 # Progress bar updater
@@ -291,9 +328,9 @@ class Equations(wx.Frame):
 #######################
     def onAbout(self, event):
         if platform == 'win32':
-            dlg = wx.MessageDialog(self, "LaSolv Windows 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
+            dlg = wx.MessageDialog(self, "LaSolv for Windows 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
         else:
-            dlg = wx.MessageDialog(self, "LaSolv Mac 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
+            dlg = wx.MessageDialog(self, "LaSolv for Mac 0.9.5\nCopyright 2022 by Thomas Spargo", "About LaSolv...", wx.OK)
         dlg.ShowModal()
         dlg.Destroy()
 
@@ -309,10 +346,10 @@ class Equations(wx.Frame):
             provider = wx.SimpleHelpProvider()
             wx.HelpProvider.Set(provider)
 
-            helpWin = HtmlHelpWindow(self, 'Helpful window', thePath)
+            helpWin = ui.HtmlHelpWindow(self, 'Helpful window', thePath)
             helpWin.Show()
         else:
-            self.fnNPath.SetLabel("Sorry, I can't find the help file :(")
+            self.eqSetMssg("Sorry, I can't find the help file :(")
 
     def onNew(self, event):
         if self.textChanged:
@@ -338,22 +375,22 @@ class Equations(wx.Frame):
             self.onPlot(event, False)
         #if self.eqSolver.getEvalAnswer() is not None:
         if self.eqSolver.allValuesDefined():
-            if self.GetPlotFrom() == '' or self.GetPlotTo() == '':
+            if self.eqGetPlotFrom() == '' or self.eqGetPlotTo() == '':
                 f_start = f_stop = -1
             else:
-                f_start = float(eno.EngNumber(self.GetPlotFrom()))
-                f_stop = float(eno.EngNumber(self.GetPlotTo()))
+                f_start = float(eno.EngNumber(self.eqGetPlotFrom()))
+                f_stop = float(eno.EngNumber(self.eqGetPlotTo()))
                 if f_start > f_stop:
-                    self.fnNPath.SetLabel('Starting frequency is > stop frequency')
+                    self.eqSetMssg('Starting frequency is > stop frequency')
                     return
             if self.eqSolver.getPlotFrame() is not None:
                 self.eqSolver.closePlot()
             err_txt = self.eqSolver.eqnPlot(f_start, f_stop, self.updateProgress,
-                                            self.plot_format, self.getUseDB(), self.getSorP() )
+                        self.eqGetPlotFormat(), self.eqGetDBMode(), self.eqGetSorP() )
             if err_txt != "":
-                self.fnNPath.SetLabel(err_txt)
+                self.eqSetMssg(err_txt)
         else:
-            self.fnNPath.SetLabel('All components (except v, i) must have a value in order to plot')
+            self.eqSetMssg("All components (except v's & i's) must have a value in order to plot")
 
     def onQuit(self, event):
         if self.textChanged:
@@ -362,56 +399,53 @@ class Equations(wx.Frame):
             print("onQuit: eqSolver.closePlot()")
             self.eqSolver.closePlot()
         print("onQuit: Destroy")
-        self.ButtonPanel.Close(True)
-        self.TextPanel.CktPanel.Close(True)
-        self.TextPanel.ResPanel.Close(True)
-        self.TextPanel.Close(True)
-        self.menubar.Close(True)
         self.Close(True)
         #wx.CallAfter(self.Destroy)
 
     def onSave(self, event):
-        if self.fullPath == None:
+        if self.fnNPath == None:
             self.onSaveAs(event)
         else:
-            t = self.getText()
-            file1 = open(self.fullPath, "w+")
-            file1.write(t)
-            file1.close()
-            self.setTextChangeFlag(False)
+            t = self.eqGetCircuitText()
+            self.saveFile(t)
+            #file1 = open(self.fnNPath, "w+")
+            #file1.write(t)
+            #file1.close()
+            #self.setTextChangeFlag(False)
 
     def onSaveAs(self, event):
         #initialdir = '/Users/Thomas/eclipse-workspace/ESGui_Python/Circuit files')
-        t = self.getText()
-        with wx.FileDialog(self, "Save as:", wildcard = '.txt files (*.txt)|*.txt',
-            style = wx.FD_SAVE) as fileDialog:
+        t = self.eqGetCircuitText()
+        with wx.FileDialog(self, "Save as:", wildcard = 'txt files (*.txt)|*.txt',
+            style = wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return
-            self.fullPath = fileDialog.GetPath()
-            try:
-                with open(self.fullPath, 'w+') as f1:
-                    f1.write(t)
-                    f1.close()
-                    self.fnNPath.SetLabel(self.fullPath)
-                    self.setTextChangeFlag(False)
-            except IOError:
-                wx.LogError("Cannot save the file in '%s'." % self.fullPath)
+            self.fnNPath = fileDialog.GetPath()
+            self.saveFile(t)
+            #try:
+            #    with open(self.fnNPath, 'w+') as f1:
+            #        f1.write(t)
+            #        f1.close()
+            #        self.fnNPath.SetLabel(self.fnNPath)
+            #        self.setTextChangeFlag(False)
+            #except IOError:
+            #    wx.LogError("Cannot save the file in '%s'." % self.fnNPath)
 
     def onSolve(self, event):
-        if self.getTestMode():
+        if self.eqGetTestMode():
             # Re-init the solver which may have values left over from a prior 'solve'
             self.eqSolver.__init__()
-            result = self.eqSolver.eqnSolveEntry(None, True)
+            self.eqSolver.eqnSolveEntry(None, True)
         else:
-            if self.textChanged or self.fullPath != None:
-                self.fnNPath.SetLabel('Solving.....')
-                self.setResultText('')
+            if self.textChanged or self.fnNPath is not None:
+                self.eqSetMssg('Solving.....')
+                self.eqSetResultText('')
                 #wx.AppConsole().Yield()
                 wx.GetApp().Yield()
                 self.onSave(event)
-                self.fnNPath.SetLabel(self.fullPath)
                 #self.eqSolver.__init__()
-                result = self.eqSolver.eqnSolveEntry(self.fullPath, False)
+                result = self.eqSolver.eqnSolveEntry(self.fnNPath, False)
+                self.eqSetMssg(self.fnNPath)
                 if result == 0:     # ie, if no error occurred
                     if Support.gVerbose > 2:
                         print(Support.myName(), ' result=', result)
@@ -422,28 +456,9 @@ class Equations(wx.Frame):
                         print(Support.myName(), 'best=', self.eqSolver.getBestAnswer())
                     self.setResultEqn()
                 else:
-                    if result == 30:
-                        err_txt =           "The solution denominator is 0.0. You may be asking to"
-                        err_txt = err_txt + " solve for something 'weird'. Try solving for something"
-                        err_txt = err_txt + " slightly different. For instance, if you have something"
-                        err_txt = err_txt + " like this in your circuit file:"
-                        err_txt = err_txt + "     Vin 1 0"
-                        err_txt = err_txt + "     ....(other stuff)"
-                        err_txt = err_txt + "     Rload 8 0 "
-                        err_txt = err_txt + "     solve 8 0 vin"
-                        err_txt = err_txt + " Trying changing the solve statement to: "
-                        err_txt = err_txt + "     solve 8 0 1 0"
-                    elif result == 31:
-                        err_txt =           "The solution is 0.0. There's probably something wrong"
-                        err_txt = err_txt + " with the circuit definition- a floating node (a"
-                        err_txt = err_txt + " node with only one connection) is a common issue."
-                    else:
-                        # The error should have already been printed and a dialog been opened.
-                        print("EqnSolveEntry returned error code ", str(result))
-                        err_txt = ''
-                    self.setResultText(err_txt)
+                    Support.myExit(result)
             else:
-                self.fnNPath.SetLabel('You must load or type in a circuit first')
+                self.eqSetMssg('You must load or type in a circuit first')
 
 ########################################
 # Keyboard Callback
@@ -457,30 +472,27 @@ class Equations(wx.Frame):
         event.Skip()
 
 ########################################
-# Text Callbacks, setters and getters
+# Text setters and getters
 ########################################
-    def getText(self):
-        return self.TextPanel.getCircuitText()
+    def eqGetCircuitText(self):
+        return self.TextPanel.tpGetCircuitText()
 
-    def setTextChangeFlag(self, flg):
-        self.textChanged = flg
-        if Support.gVerbose > 9:
-            print(Support.myName(), 'textChanged=', self.textChanged)
+    def eqSetCircuitText(self, txt):
+        self.TextPanel.tpSetCircuitText(txt)
 
-    def setCircuitText(self, txt):
-        self.TextPanel.setCircuitText(txt)
+    def eqSetResultText(self, txt):
+        self.TextPanel.tpSetResultText(txt)
 
-    def setResultText(self, txt):
-        self.TextPanel.setResultText(txt)
-
-    ## Take a sympy numer, denom and convert to a string expression like:
-    ## "numer
-    ##  -----------
-    ##  denominator"
+    def eqSetMssg(self, mssg):
+        self.ButtonPanel.uiSetMssg(mssg)
 
     def nd2string(self, eqn, prec=3):
+        """ Take a sympy numer, denom and convert to a string expression like:
+          numer
+        ---------
+          denom
+        """
         n, d = fraction(eqn)
-        #numer_str = str(n)
         numer_str = str(N(n, prec))
         if d != 1.0:
             denom_str = str(N(d, prec))
@@ -508,40 +520,45 @@ class Equations(wx.Frame):
         if evals is not None:
             temp = self.nd2string(evals, 5)
             txt = txt + '\n\nWith values substituted, it becomes:\n' + temp
-        self.setResultText(txt)
+        self.eqSetResultText(txt)
 
     def newFile(self):
         self.initVar()
-        self.setResultText('')
-        self.fnNPath.SetLabel('')
-        self.setCircuitText('')
         self.SetTitle('')
-
         self.setTextChangeFlag(False)
+        self.eqSetFullPath(self.fnpPath, "circuit.txt")
 
     def readFile(self):
-        dlg = wx.FileDialog(self, "Open...", self.dirname, "", "*.txt", wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
-        if dlg.ShowModal() == wx.ID_OK:
-            self.filename = dlg.GetFilename()
-            self.dirname = dlg.GetDirectory()
-            self.fullPath = self.dirname+'/'+self.filename
-            if Support.gVerbose > 2:
-                print(Support.myName(), ' filename=', self.filename)
-                print(Support.myName(), ' directory=', self.dirname)
-                print(Support.myName(), ' full path=', self.fullPath)
-            file1 = open(self.fullPath, 'r')
-            self.theFile = file1.read()
-            file1.close()
-            self.setResultText('')
-            #self.lbl.SetLabel(self.fullPath)
-            self.setCircuitText(self.theFile)
-            self.setTextChangeFlag(False)
-            self.SetTitle(self.filename)
+        (path, file) = os.path.split(self.fnNPath)
+        with wx.FileDialog(self, "Open...", defaultDir=self.fnpPath, defaultFile=self.fnpFile, wildcard="txt files (*.txt)|*.txt", style=wx.FD_OPEN|wx.FD_FILE_MUST_EXIST) as dlg:
+            if dlg.ShowModal() == wx.ID_OK:
+                #dirname = dlg.GetDirectory()
+                #self.fnNPath = self.dirname+'/'+self.filename
+                #self.fnNPath = os.path.join(dirname, filename)
+                #self.fnNPath = dlg.GetPath()
+                self.eqSetFilenameNPath(dlg.GetPath())
+                if Support.gVerbose > 2:
+                    print(Support.myName(), ' full path=', self.fnNPath)
+                f1 = open(self.fnNPath, 'r')
+                fileText = f1.read()
+                f1.close()
+                self.eqSetResultText('')
+                #self.lbl.SetLabel(self.fnNPath)
+                self.eqSetMssg(self.fnNPath)
+                self.eqSetCircuitText(fileText)
+                self.setTextChangeFlag(False)
+                self.SetTitle(os.path.split(self.fnNPath)[1])
+            #dlg.Destroy()
 
-        dlg.Destroy()
-
-#def run_lasolv():
-#    LaSolvApp()
+    def saveFile(self, txt):
+        try:
+            with open(self.fnNPath, 'w+') as f1:
+                f1.write(txt)
+                f1.close()
+                self.eqSetMssg(self.fnNPath)
+                self.setTextChangeFlag(False)
+        except IOError:
+            wx.LogError("Cannot save the file in '%s'." % self.fnNPath)
 
 if __name__ == '__main__':
     app = wx.App()

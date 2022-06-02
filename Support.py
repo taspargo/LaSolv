@@ -24,9 +24,10 @@ Created on Nov 26, 2016
 
 import wx
 import traceback
+import gui_wx as gw
 
 # 0 to 4?
-gVerbose = 0
+gVerbose = 3
 
 def myName():
     return traceback.extract_stack(None, 2)[0][2]
@@ -69,7 +70,7 @@ def myName():
 # 36   Eqn has no freq dependence, trivial plot  eqnSolver, eqnPlot
 # 37   Eqn is unstable, can't plot it.           eqnSolver, eqnPlot
 
-err_list = [ \
+err_list = [
 "Zero",
 "Node not found in reverse lookup",
 "Controlling source current couldn't be calculated",           
@@ -112,6 +113,26 @@ err_list = [ \
 
 def myExit(code, errMssg=''):
     if code <= len(err_list):
+        if code == 30:
+            err_txt = "The solution denominator is 0.0. You may be asking to"
+            err_txt = err_txt + " solve for something 'weird'. Try solving for something"
+            err_txt = err_txt + " slightly different. For instance, if you have something"
+            err_txt = err_txt + " like this in your circuit file:"
+            err_txt = err_txt + "     Vin 1 0"
+            err_txt = err_txt + "     ....(other stuff)"
+            err_txt = err_txt + "     Rload 8 0 "
+            err_txt = err_txt + "     solve 8 0 vin"
+            err_txt = err_txt + " Trying changing the solve statement to: "
+            err_txt = err_txt + "     solve 8 0 1 0"
+        elif code == 31:
+            err_txt = "The solution is 0.0. There's probably something wrong"
+            err_txt = err_txt + " with the circuit definition- a floating node (a"
+            err_txt = err_txt + " node with only one connection) is a common issue."
+        else:
+            # The error should have already been printed and a dialog been opened.
+            print("EqnSolveEntry returned error code ", str(code))
+            err_txt = ''
+        gw.eqSetResultText(err_txt)
         print('*'*(len(err_list[code])+11))
         print("Error #{0:2}: {1:}".format(code, err_list[code]))
             

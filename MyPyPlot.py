@@ -7,19 +7,21 @@ Created on Feb 6, 2019
 
 #import matplotlib
 #matplotlib.use('WXAgg')
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 import wx
+import wx.lib.plot as plot
+
 import lumpy
 import Enums
 from math import ceil, floor
 
+"""
 class CanvasPanel(wx.Frame):
-    def __init__(self, parent, gui, f_array, m_array, p_array, *args, **kw):
+    def __init__(self, parent, gui, f_array, m_array, p_array):
         '''
         Takes a solved equation numer/denom, and plots it, xaxis is f_array, and y's are m_ & p_.
         '''
-        wx.Frame.__init__(self, None, *args, **kw)
         self.panel = wx.Panel.__init__(self, parent)
 
         self.gui = gui
@@ -52,7 +54,7 @@ class CanvasPanel(wx.Frame):
             self.plot = plt.figure(1, figsize=(6,6))
         else:
             self.plot = plt.figure(1, figsize=self.fig_size)
-        self.fig = plt.subplot(2,1,1)
+        plt.subplot(2,1,1)
         plt.xscale('log')
         plt.subplots_adjust(hspace=0.55, top=0.92, left=0.15)
         plt.plot(self.xValues, self.y1Values)
@@ -64,8 +66,18 @@ class CanvasPanel(wx.Frame):
                 plt.ylabel('Magnitude, dB')
             else:
                 plt.ylabel('Magnitude, V/V')
+        elif plot_format == Enums.pf_list[1]:
+            # Real/Imag
+            if s_or_p == Enums.format_sp[0]:
+                # Series
+                plt.title('Resistance')
+                plt.ylabel('Ohms')
+            else:
+                # Parallel
+                plt.title('Conductance')
+                plt.ylabel('Siemens')
         else:
-            # Re/Im or RLC
+            # RLC
             if s_or_p == Enums.format_sp[0]:
                 # Series
                 plt.title('Resistance')
@@ -116,15 +128,9 @@ class CanvasPanel(wx.Frame):
                 yt = [newB]
             plt.yticks(yt)
         #plt.draw()
-
-        #self.cid = plt.canvas.connect('close_event', self.onClose)
-        self.cid = plt.connect('close_event', self.onClose)
         plt.show()
 
-    def onClose(self, event):
-        self.closeFigure()
-
-"""1) Define our data :
+1) Define our data :
 
 We insert your data in a list of tuples.
 Each tuple will have two items.
@@ -169,28 +175,34 @@ Finally we draw the graph.
 
 client.Draw(gc,  xAxis=(0,15), yAxis=(0,15))
 
-gc is a graph container object. xAxis and yAxis define the range of the axes (info by ZetCode / Jan Bodnar)."""
-
-"""
-import wx
-import wx.lib.plot as plot
-    
-class MyPlot(wx.Dialog):
-    def __init__(self, parent, id, title):
-        wx.Dialog.__init__(self, parent, id, title, size=(180, 280))
+gc is a graph container object. xAxis and yAxis define the range of the axes (info by ZetCode / Jan Bodnar).
+    """
+class MyPyPlot(wx.Dialog):
+    def __init__(self, parent, id, f_array, m_array, p_array):
+        wx.Dialog.__init__(self, parent, id, "A Plot", size=(180, 280))
 
         #------------
 
-        icon = wx.Icon("./icons/wxwin.ico")
+        icon = wx.Icon("LaSolv_icon.icns")
         self.SetIcon(icon)
 
         #------------
-        
-        self.data = [(1,2), (2,3), (3,5), (4,6), (5,8), (6,8), (10,10)]
+        data1 = list()
+        data2 = list()
 
-    def OnLine(self, event):
+        print(len(f_array))
+        print(len(m_array))
+        for inx in range(len(f_array)):
+            print(inx, f_array[inx], m_array[inx])
+            data1.append(  [f_array[inx], m_array[inx]] )
+            data2.append(  [f_array[inx], p_array[inx]] )
+
+        self.data = [(1,2), (2,3), (3,5), (4,6), (5,8), (6,8), (10,10)]
+        self.OnLine()
+
+    def OnLine(self):
         frm = wx.Frame(self, -1, 'Line', size=(600, 450))
-        icon = wx.Icon("./icons/wxwin.ico")
+        icon = wx.Icon("LaSolv_icon.icns")
         frm.SetIcon(icon)
         
         pnl = wx.Panel(frm, -1)        
@@ -211,4 +223,4 @@ class MyPlot(wx.Dialog):
 
         #------------
         
-        frm.Show(True)"""
+        frm.Show(True)

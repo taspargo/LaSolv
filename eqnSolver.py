@@ -156,7 +156,7 @@ class eqn_solver(object):
             onesThatDidntMatch = [ ]
             print('main: cwd=', getcwd())
 
-            chdir('../Examples_w_answers')
+            chdir('/Users/Thomas/Programming/Python/LaSolv_support/Examples_w_answers')
             print('main: cwd=', getcwd())
             filesToUse = ['ota_output.txt']
             #filesToUse.append('test_bjt.txt')
@@ -462,12 +462,13 @@ class eqn_solver(object):
 
         if self.plotFrame is None:
             self.plotFrame = Frame(None, title='LaPlot')
-            self.plotPanel = MyPlot.CanvasPanel(None, self, self.fValues, self.y1, self.y2)
+            self.plotPanel = MyPlot.CanvasPanel(self.plotFrame, self,  self.fValues, self.y1, self.y2)
             self.plotPanel.draw(self.plot_format, self.use_db, self.SorP, self.rlc_units, True, self.fig_size)
+            #self.plotPanel = MyPyPlot.MyPyPlot(None, -1,  self.fValues, self.y1, self.y2)
         else:
             print("THIS SHOULDN'T HAPPEN!")
             self.plotPanel.draw(self.plot_format, self.use_db, self.SorP, self.rlc_units, False)
-        #update_fcn(0)
+        update_fcn(0)
         return ""
 
     #******************************************************************************8
@@ -506,12 +507,13 @@ class eqn_solver(object):
         return fValues
 
     def closePlot(self):
-        print("closePlot: plotPanel.closeFigure")
-        self.plotPanel.closeFigure()
+        #print("closePlot: plotPanel.closeFigure")
+        if self.plotPanel is not None:
+            self.plotPanel.closeFigure()
         print("closePlot: plotPanel.Close")
-        self.plotPanel.Close()
         print("closePlot: plotFrame.Close")
-        self.plotFrame.Close()
+        if self.plotFrame is not None:
+            self.plotFrame.Close()
         self.plotPanel = None
         self.plotFrame = None
 
