@@ -1,33 +1,44 @@
-# -*- mode: python -*-
+# -*- mode: python ; coding: utf-8 -*-
 
-import sys
-sys.setrecursionlimit(5000)
 
 block_cipher = None
 
 
-a = Analysis(['./src/gui_wx.py', './src/Enums.py', './src/eqnSolver.py'],
-             pathex=['/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages', './src'],
+a = Analysis(['LaSolv/gui_wx.py'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=[],
              hookspath=[],
+             hooksconfig={},
              runtime_hooks=[],
-             excludes=['FixTk', 'tcl', 'tk', 'tkinter', '_tkinter', 'Tkinter'],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
+
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
           a.zipfiles,
-          a.datas,
+          a.datas,  
           [],
           name='LaSolv',
           debug=False,
           bootloader_ignore_signals=False,
           strip=True,
           upx=True,
+          upx_exclude=[],
           runtime_tmpdir=None,
-          console=False, icon='LaSolv_icon.icns')
+          console=False,
+          disable_windowed_traceback=False,
+          target_arch=None,
+          codesign_identity=None,
+          entitlements_file=None , icon='LaSolv/LaSolv_icon.icns')
+app = BUNDLE(exe,
+             name='LaSolv.app',
+             icon='LaSolv/LaSolv_icon.icns',
+             bundle_identifier=None)
