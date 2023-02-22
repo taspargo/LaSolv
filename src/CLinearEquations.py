@@ -1,4 +1,4 @@
-"""  
+"""
 Copyright 2019 Thomas Spargo
 
 This file is part of LaSolv.
@@ -21,42 +21,47 @@ Created on Nov 27, 2016
 
 @author: Tom Spargo
 '''
-''' 1/31/2019. Removed solveEquations2, swapRows, reorderEquations, and zeroDiagonal.
-    2/3/2019. Fixed jw substitution.
-    Need to check for oo and zoo (infinity & complete infinity) in the solution
-    equation. Import them as sympy.S.Infinity and sympy.S.ComplexInfinity
-'''
-import sympy
-from sympy import factor
-from sympy.printing.mathml import mathml
-#from sympy.matrices import SparseMatrix
-import CSimpList
-import Support
 
+#from itertools import permutations
+import sympy
+from sympy.printing.mathml import mathml
+import Support
+from sympy import factor, pprint, init_printing, zeros, degree
+import Reorder
+
+import CGauss
+#from main import *
 import re as reg
+import time
+
 import engineering_notation as eno
+
 
 class CLinearEquations(object):
     """
     Solves linear systems using symbolic equations.
     
     Given a circuit object, the matrices are filled with the respective admittances.
-    Uses Gaussian elmination and back substitution to obtain the nodal voltages in the circuit
+    Uses Gaussian elimination and back substitution to obtain the nodal voltages in the circuit
     """
+    @staticmethod
+    def static_pp(mat):
+        sympy.pprint(mat)
 
     def __init__(self, order):
         """Create the matrix, i(current) column and v(voltage) column"""
-        """ aMatrix * vColumn = iColumn """
-        self.aMatrix = sympy.zeros(order)
-        self.iColumn = sympy.zeros(order, 1)
-        self.vColumn = sympy.zeros(order, 1)
-        self.solution = sympy.zeros(order, 1)
+        self.aMatrix = zeros(order, order)
+        self.iColumn = zeros(order, 1)
+        self.vColumn = zeros(order, 1)
+        self.solution = zeros(order, 1)
         self.nNodes = order
         self.answer = None      # Raw answer with no value substituted.
         self.evalAnswer = None  # Answer with component values put in, not freq
         self.freq = None
+
         if Support.gVerbose > 2:
             print(Support.myName(), ' order=', order)
+        init_printing()
     
     def getAnswer(self):
         return self.answer
@@ -66,7 +71,7 @@ class CLinearEquations(object):
         
     def getFreq(self):
         return self.freq
-                
+    
     def getAMatrix(self):
         return self.aMatrix
     
@@ -76,18 +81,11 @@ class CLinearEquations(object):
     def getVColumn(self):
         return self.vColumn
     
-    def solveEquations(self):
-        # Matrix * vColumn = iColumn
-        # vColumn = Matrix.inv * iColumn
-        #err = self.reorderEquations()
+    def solveEquations(self): 
+        t_start = time.time()
 
-        if Support.gVerbose > 2:
-            print(Support.myName(), ': aMatrix before deleting:')
-            self.printES(self.aMatrix)
-            print(Support.myName(), ': iColumn before deleting:')
-            self.printES(self.vColumn)
-            print(Support.myName(), ': vColumn before deleting:')
-            self.printES(self.iColumn)
+        if Support.gVerbose > 1:
+            print(Support.myName(),': Deleting row & column 0 from matrix and column vectors')
 
         self.aMatrix.row_del(0)
         self.aMatrix.col_del(0)
@@ -96,61 +94,87 @@ class CLinearEquations(object):
         self.vColumn.row_del(0)
         self.nNodes = self.nNodes - 1
         
-        if Support.gVerbose > 2:
-            print(Support.myName(), ': aMatrix after deleting the 0 column and row:')
-            self.printES(self.aMatrix)
-            print(Support.myName(), ': iColumn after deleting the 0 column and row:')
-            self.printES(self.vColumn)
-            print(Support.myName(), ': vColumn after deleting the 0 column and row:')
-            self.printES(self.iColumn)
-        
-        if (self.aMatrix).det() == 0:
-            print(Support.myName(), ': aMatrix det = 0.')
-            return 26
-            
-        self.solution = (self.aMatrix).inv() * self.iColumn
-        if Support.gVerbose > 0:
-            print(Support.myName(), ': aMatrix after inverting and multiplying by iColumn:')
-            print(self.aMatrix)
-        
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': aMatrix after deleting row & column 0:')
+            self.pp(self.aMatrix)
+            print(Support.myName(), ': vColumn after deleting row 0:')
+            self.pp(self.vColumn)
+            print(Support.myName(), ': iColumn after deleting row 0:')
+            self.pp(self.iColumn)
+        if Support.gVerbose > 1:
+            print(Support.myName(),': Starting ReorderEquations')
+        new_mat, new_col = Reorder.reorderEquations(self.aMatrix, self.iColumn)
+        if new_mat == -1:
+            print(Support.myName(), ': ReorderEquations failed. Exiting.')
+            code = Support.myExit(25)
+            return code
+        self.aMatrix = new_mat
+        self.iColumn = new_col
+        if Support.gVerbose > 1:
+            print(Support.myName(),': Finished ReorderEquations')
+
+        le = CGauss.CGauss(self.aMatrix, self.iColumn)
+        le.elimination()
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': aMatrix after elimination:')
+            sympy.pprint(self.aMatrix)
+            print()
+            print(Support.myName(), ': iColumn after elimination:')
+            sympy.pprint(self.iColumn)
+            print()
+            print(Support.myName(), ': Beginning back-substitution')
+        le.back_subs()
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': aMatrix after back-substitution:')
+            sympy.pprint(self.aMatrix)
+            print()
+            print(Support.myName(), ': iColumn after back-substitution:')
+            sympy.pprint(self.iColumn)
+        t_end = time.time()
+        if (Support.gVerbose > 0):
+            print(Support.myName(), "Time to solve: ", t_end-t_start)
         return 0
     
     def calculateSolution(self, circuit):
-        top = circuit.calculateVorIEqn(self.solution, circuit.getOutputSource())
-        bottom = circuit.calculateVorIEqn(self.solution, circuit.getInputSource())
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': Calculating output source equation')
+        top = circuit.calculateVorIEqn(self.iColumn, self.vColumn, circuit.getOutputSource())
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': Calculating input source equation')
+        bottom = circuit.calculateVorIEqn(self.iColumn, self.vColumn, circuit.getInputSource())
         
         if Support.gVerbose > 2:
             print(Support.myName(), ': top=', top)
             print(Support.myName(), ': bottom=', bottom)
-        #if sympy.Ne(bottom, 0):
-        if bottom != 0:
+        if bottom != 0 and bottom is not None:
             self.answer = top.factor() / bottom.factor()
-            #self.answer = top / bottom
-            #self.answer = self.answer.simplify()
-            #self.answer = self.answer.factor()
+            self.answer = sympy.cancel(self.answer)
+            self.answer = self.answer.factor()
         else:
             if Support.gVerbose > 1:
                 print(Support.myName(), ': Solution denom = 0')
             self.answer = sympy.S.Infinity
             return (sympy.S.Infinity, 0.0)
-        print('calcSoln: self.answer=', self.answer)
         top, bottom = self.answer.as_numer_denom()
         return (top, bottom)
-
+    
     def fillMatrix(self, circuit):
         """Fill up the matrix, i-column and v-column with admittances from the circuit"""
         self.fillVColumn(circuit)
         self.fillAMatrix(circuit)
     
     def fillAMatrix(self, circuit):
-        """Fill the eqnSolver n x n matrix with admittances"""        
+        """Fill the main n x n matrix with admittances"""        
         if Support.gVerbose > 1:
             print(Support.myName(), ': len(eList)=', len(circuit.getEList()))
-        for elNum in range(len(circuit.getEList() )):
-            element = circuit.getEList()[elNum]
+            
+        sSym = sympy.symbols('s')
+        #for elNum in range(len(circuit.getEList() )):
+        for elNum, element in enumerate(circuit.getEList(), 1 ):
+            #element = circuit.getEList()[elNum]
             # Get the connecting nodes for all type of elements
             # i, j are the nodes the element is connected between.
-            # m is the row that was added for an E, F, G, H, or V element. For H's, two rows are added and n is that row.
+            # m is the row that was added for an E, F, G, H, T, or V element. For H's, two rows are added and n is that row.
             # k, l are the controlling nodes for E, F, G, or H elements.
             i = element.getNode1()
             j = element.getNode2()
@@ -159,199 +183,134 @@ class CLinearEquations(object):
             l = element.getNode4()
             m = element.getSourceNode1()
             n = element.getSourceNode2()
-            iSenseLabel = 'None'
+            #iSenseLabel = 'None'
             if Support.gVerbose > 1:
                 print(Support.myName(), ': Element #', elNum)
                 element.printElement()
             if Support.gVerbose > 2:
-                print(Support.myName(), ': i=', i, ', j=', j, ', k=', k, ', l=', l, ', m=', m, ', n=', n, \
-                        ', isense=', iSenseLabel)
+                print(Support.myName(), ': i=', i, ', j=', j, ', k=', k, ', l=', l, ', m=', m, ', n=', n)
             et = element.getElementType()
-            sym = sympy.symbols(element.getLabel())
-            sSym = sympy.symbols('s')
+            lbl = element.getLabel()
+            sym = sympy.symbols(lbl)
             if et == 'c':
                 self.addElementToMatrix(i, j, sym*sSym)
             elif et == 'e':     # VCVS     Checked
-                                # Vk * E - Vi + Vj - Vl * E = 0
-                                # Ii = Io
-                                # Ij = -Io
-                self.addSourceToMatrixH(j, i, m, 1.0)   # - Vi + Vj
-                self.addSourceToMatrixV(i, j, m, 1.0)   # Ii = Io   Ij = -Io
-                self.addSourceToMatrixH(k, l, m, sym)   # Completes Vk * E - Vi + Vj - Vl * E
+                # Vk * E - Vi + Vj - Vl * E = 0
+                # Ii = Io
+                # Ij = -Io
+                self.addSourceToMatrix2C(j, i, m, 1.0)   # - Vi + Vj
+                self.addSourceToMatrix2R(i, j, m, 1.0)   # Ii = Io   Ij = -Io
+                self.addSourceToMatrix2C(k, l, m, sym)   # Completes Vk * E - Vi + Vj - Vl * E
             elif et == 'f':     # CCCS     Checked
-                                # Vk - Vl = 0
-                                # Ii = Io
-                                # Ij = -Io
-                                # Ik = Io/F
-                                # Il = -Io/F
-                self.addSourceToMatrixH(k, l, m, 1.0)
-                self.addSourceToMatrixV(i, j, m, 1.0)
-                self.addSourceToMatrixV(k, l, m, 1.0/sym)   # Vk - Vl = 0 (IVS for current sensing)
-                                                            # Ik = Iout/F  Il = -Iout/F
+                # Vk - Vl = 0
+                # Ii = Io
+                # Ij = -Io
+                # Ik = Io/F
+                # Il = -Io/F
+                self.addSourceToMatrix2C(k, l, m, 1.0)
+                self.addSourceToMatrix2R(i, j, m, 1.0)
+                self.addSourceToMatrix2R(k, l, m, 1.0/sym)   # Vk - Vl = 0 (IVS for current sensing)
+                # Ik = Iout/F  Il = -Iout/F
             elif et == 'g':     # VCCS     Checked
-                                # Vk - Vl - Io/G = 0
-                                # Ii = Io
-                                # Ij = -Io 
-                                # Ik = Il = 0
-                self.addSourceToMatrixH(k, l, m, 1.0)   # Vk - Vl
-                self.addSourceToMatrixV(i, j, m, 1.0)   # Ii = Io  Ij = -Io
-                self.addSourceToMatrixH(m, 0, m, -1.0/sym)  # not admittance, it's 1/G.
-                                                            # -G (completes Vk - Vl - Iout/G = 0)
+                # Vk - Vl - Io/G = 0
+                # Ii = Io
+                # Ij = -Io
+                # Ik = Il = 0
+                self.addSourceToMatrix2C(k, l, m, 1.0)   # Vk - Vl
+                self.addSourceToMatrix2R(i, j, m, 1.0)   # Ii = Io  Ij = -Io
+                self.addSourceToMatrix2C(m, 0, m, -1.0/sym)  # not admittance, it's 1/G.
+                # -G (completes Vk - Vl - Iout/G = 0)
             elif et == 'h':     # CCVS, the only dependent source with two extra unknowns
-                                # Vk - Vl = 0             n row
-                                # Vi - Vj - Iin * H = 0   m row
-                                # Ii = Io                 n column
-                                # Ij = -Io                n column
-                                # Ik = Iin                m column
-                                # Il = -Iin               m column
-                self.addSourceToMatrixH(k, l, n, 1.0)   # Vk - Vl                             C
-                self.addSourceToMatrixH(i, j, m, 1.0)   # Vi - Vj                             A
-                self.addSourceToMatrixV(k, l, n, 1.0)   # Ii = Iout  Ij = -Iout               D
-                self.addSourceToMatrixH(n, 0, m, 0-sym)  # 1/trans-R. -G (completes Vi-Vj-H*Iin=0) A
-                self.addSourceToMatrixV(i, j, m, 1.0)   # Ik = Iin  Il = -Iin                     B
+                # Vk - Vl = 0             n row
+                # Vi - Vj - Iin * H = 0   m row
+                # Ii = Io                 n column
+                # Ij = -Io                n column
+                # Ik = Iin                m column
+                # Il = -Iin               m column
+                self.addSourceToMatrix2C(k, l, n, 1.0)   # Vk - Vl                             C
+                self.addSourceToMatrix2C(i, j, m, 1.0)   # Vi - Vj                             A
+                self.addSourceToMatrix2R(k, l, n, 1.0)   # Ii = Iout  Ij = -Iout               D
+                self.addSourceToMatrix2C(n, 0, m, -sym)  # 1/trans-R. -G (completes Vi-Vj-H*Iin=0) A
+                self.addSourceToMatrix2R(i, j, m, 1.0)   # Ik = Iin  Il = -Iin                     B
             elif et == 'i':     # Independent current source
-                                # I column, Ii = Io, Ij = -Io
+                # I column, Ii = Io, Ij = -Io.
+                                # Input is N+ node (tail of arrow)
+                # Output is N- node (on the pointy arrow end).
                 self.addElementToIColumn(i, j, sym)
+            elif et == 'k':
+                pass
             elif et == 'l':
                 self.addElementToMatrix(i, j, 1.0/(sym*sSym))
+            elif et == 'm':
+                # [    .    .    .    .    1       0    ]    [V1]    [I1]    Ib1 = I1
+                # [    .    .    .    .   -1       0    ]    [V2]    [I2]   -Ib1 = I2
+                # [    .    .    .    .    0       1    ] *  [V3] =  [I3]    Ib2 = I3
+                # [    .    .    .    .    0      -1    ]    [V4]    [I4]   -Ib2 = I4
+# line for Ind1   [    1   -1    0    0    sL1    sk*L  ]    [Ib1]   [0 ]
+# line for Ind2   [    0    0    1   -1    sk*L   sL2   ]    [Ib2]   [0 ]    L = sqrt(L1*L2)
+                # Ind1 eqn    V1-V2+ s*L1*Ib1 + s*k*L*Ib2 = 0
+                # Ind2 eqn    V3-V4+ s*k*L    + s*L2*Ib2  = 0
+                l1 = element.getL1()
+                l2 = element.getL2()
+                l1n1 = l1.getNode1()
+                l1n2 = l1.getNode2()
+                l2n1 = l2.getNode1()
+                l2n2 = l2.getNode2()
+                k_l1 = element.getOtherValue() * sSym * sympy.symbols(l1)
+                k_l2 = element.getOtherValue() * sSym * sympy.symbols(l2)
+                self.addElementToMatrix(m, n, k_l1)
+                self.addElementToMatrix(n, m, k_l2)
+                self.addSourceToMatrix2C(l1n1, l1n2, m, 1)
+                self.addSourceToMatrix2C(l2n1, l2n2, n, 1)
+                self.addSourceToMatrix2R(l1n1, l1n2, m, 1)
+                self.addSourceToMatrix2R(l2n1, l2n2, n, 1)
             elif et == 'r':
                 self.addElementToMatrix(i, j, 1.0/sym)
-            elif et == 'v':     # Independent voltage source
-                                # Vi-Vj = E + transpose
-                                # If it's a sensing source for a controlled source, don't add it into the matrix like its an IVS.
-                                # the controlled source element will put in the correct matrix entries.
-                if not circuit.isControlledSourceSensingVS(element):
-                    self.addSourceToMatrixH(i, j, m, 1.0)
-                    self.addSourceToMatrixV(i, j, m, 1.0)
-                    self.addElementToIColumn(m, 0, sym)
+            elif et == 't':
+                # [    .    .    .    .   -1    ]   [V1]   [I1]
+                # [    .    .    .    .    T    ]   [V2]   [I2]
+                # [    .    .    .    .   -T    ] * [V3] = [I3]
+                # [    .    .    .    .    1    ]   [V4]   [I4]
+                # [    1   -T    T   -1    0    ]   [It]   [0 ]
+                # T*(V2-V3) = V1-V4    -> V1-T*V2 + T*V3 - V4 = 0
+                self.addSourceToMatrix2C(i, l, m, 1)    # row m: V1 - V4
+                self.addSourceToMatrix2R(i, l, m, -1)   # col m: -It1 = I1, It4 = I4
+                self.addSourceToMatrix2C(j, k, m, sym)  # row m: -T*V2 + T*V3
+                self.addSourceToMatrix2R(j, k, m, -sym) # col m: T*It2 = I2, -T*It = I3
+                #        row m total: V1 + T*V3 - V4 - T*V2
+            elif et == 'v':
+                # Independent voltage source
+                # Vi-Vj = E + transpose
+                # If it's a sensing source for a controlled source, don't add it into the matrix like its an IVS.
+                # the controlled source element will put in the correct matrix entries.
+                #if not circuit.isControlledSourceSensingVS(element):
+                # The sensing sources aren't put in the input deck anymore, so we should have to
+                # check for it.
+                # TODO: Should a check be in here in case someone does put one in anyway?
+                self.addSourceToMatrix2C(i, j, m, 1.0)
+                self.addSourceToMatrix2R(i, j, m, 1.0)
+                self.addElementToIColumn(m, 0, sym)
             else:
                 print(Support.myName(), ': Unknown element ', element.getElementType(), ' encountered. Exiting.')
-                Support.myExit(24)
-            
-        if Support.gVerbose > 2:
-            print(Support.myName(), ': Matrix entries:')
-            self.printES(self.aMatrix)
-            print(Support.myName(), ': V Column entries:')
-            self.printES(self.vColumn)
-            print(Support.myName(), ': I Column entries:')
-            self.printES(self.iColumn)
-
-    def printES(self, mat, print_zeros=False):
-        sz = mat.shape
-        if sz[0] == 1 or sz[1] == 1:
-            if sz[0] == 1:
-                print('Row Matrix')
-            else:
-                print('Column Matrix')
-            for zz in range( self.nNodes):
-                if mat[zz] != 0.0 or print_zeros:
-                    if mat[zz] == 1.0:
-                        print('    [{0:d}]= 1.0'.format(zz))
-                    elif mat[zz] == -1.0:
-                        print('    [{0:d}]= -1.0'.format(zz))
-                    else:
-                        print('    [{0:d}]='.format(zz), mat[zz])
-        else:
-            for yy in range(self.nNodes):
-                for zz in range(self.nNodes):
-                    if mat[yy, zz] != 0.0 or print_zeros:
-                        if mat[yy, zz] == 1.0:
-                            print('    [{0:d}, {1:d}]= 1.0'.format(yy, zz))
-                        elif mat[yy, zz] == -1.0:
-                            print('    [{0:d}, {1:d}]= -1.0'.format(yy, zz))
-                        else:
-                            print('    [{0:d}, {1:d}]='.format(yy, zz), mat[yy, zz])
-    
-    def printES_iC_HTML(self, f):
-        f.write('<math>\n')
-        f.write(mathml(self.iColumn, printer='presentation'))
-        f.write('</math>\n')
+                Support.myExit(10)
         
-    def printES_HTML(self, eqn, f):
-        """Prints a single equation (if its non-zero) into the HTML file 'f'"""
-        if eqn != 0.0:
-            # This is broken up because sympy likes to print umpteen digits of precision
-            # when printing 1.000000000000
-#             f.write('<html>')
-#             f.write('<head>')
-#             f.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-MML-AM_CHTML" async></script>')
-#             f.write('</head>')
-#             f.write('<body>')
-            #Ra, Ca, Cb, s, eq = sympy.symbols('Ra Ca Cb s eq')
-            #eq = R_1**2*C1**2*s**3+R_1*C1*s**2+R_1*(C1+C2)*s
-            #eq = Ra*Cb+Ca*s**2
-            mth = sympy.mathml(sympy.N(eqn, 2), printer='presentation')
-            print(Support.myName(), 'mth before pretty_html', mth)
-            mth = self.pretty_html(mth)
-            print(Support.myName(), 'mth after pretty_html', mth)
-            f.write('<math>\n')
-            f.write( mth )
-            f.write('<p>')
-            f.write('</math>\n')
-
-    def printES_HTML_Mat(self, mat, f):
-        """Prints a matrix, either 1D or 2D, into the file 'f'. Only non-zero eqns are printed"""
-        sz = mat.shape
-        if sz[0] == 1 or sz[1] == 1:
-            f.write(r'<math>\n')
-            f.write( mathml( sympy.N(mat, 2), printer='presentation'))
-            f.write('</math>\n')
-
-            if 0:
-                for zz in range( self.nNodes):
-                    if mat[zz] != 0.0:
-                        f.write('<math>\n')
-                        #sympyfied = sympy.sympify( sympy.N(mat[zz], 2) )
-                        #print(sympyfied)
-                        #print
-                        #f.write( mathml( sympy.N(mat[zz], 2), printer='presentation') )
-                        f.write( mathml( mat[zz], printer='presentation') )
-                        f.write('<p>')
-                        f.write('</math>\n')
-        else:
-            for yy in range(self.nNodes):
-                for zz in range(self.nNodes):
-                    if mat[yy, zz] != 0.0:
-                        f.write('<table>\n')
-                        if mat[yy, zz] == 1.0:
-                            f.write('<tr><td nowrap>[%2s, %2d]= 1.0</td>' % (yy, zz))
-                        elif mat[yy, zz] == -1.0:
-                            f.write('<tr><td nowrap>[%2d, %2d]= -1.0</td>' % (yy, zz))
-                        else:
-                            fract = sympy.fraction(mat[yy, zz])
-                            f.write('</tr><tr></td><td></td><td>%s' % fract[0])
-                            f.write('[%2d, %2d]= %s' % (yy, zz, mat[yy, zz]) )
-                            f.write('</tr><tr></td><td>[%2d, %2d] = </td><td> -------------\n' % (yy, zz) )
-                            f.write('</tr><tr></td><td></td><td>%s' % fract[1])
-                    f.write('</td>\n')
-                    f.write('</tr>\n')
-                    f.write('</table>\n')
-                    f.write(r'<p>\n</p>')
-                    f.write('\n')
-
-    def pretty_html(self, strng):
-        # Fix the Safari bug
-        p1 = reg.sub(r'<mi><msub><mi>(\w+)</mi><mi>(\w+)</mi></msub></mi>', \
-                     r'<msub><mi>\1</mi><mi>\2</mi></msub>', strng)
-        # Split up identifiers into first letter then the rest to allow substripts
-        p2 = reg.sub(r'<mi>(\w)(\w+)</mi>', r'<msub><mi>\1</mi><mi>\2</mi></msub>', p1)
-        # Change invisible times to '*'
-        #p3 = p2.replace('&InvisibleTimes;', '*')
-        # Remove the unneeded '1.0*' before most terms
-        p3 = reg.sub(r'<mrow><mn>1.0</mn><mo>&InvisibleTimes;</mo>', r'<mrow>', p2)
-        # Remove a '-1.0*' before many terms 
-        p4 = reg.sub(r'<mrow><mo>-</mo><mn>1.0</mn><mo>&InvisibleTimes;</mo>', \
-                     r'<mrow><mo>-</mo>', p3)
-        # Change any remaining '1.0's to '1'
-        p5 = reg.sub(r'<mn>1.0</mn>', r'<mn>1</mn>', p4)
-
-        if Support.gVerbose > 2:
-            print(Support.myName(), ' p1=', p1)
-            print(Support.myName(), ' p2=', p2)
-            print(Support.myName(), ' p3=', p3)
-            print(Support.myName(), ' p4=', p4)
-            print(Support.myName(), ' p5=', p5)
-        return p5
+        for i in range(self.nNodes-1):
+            self.aMatrix[i,0] = 0
+            self.aMatrix[0,i] = 0
+            
+        if Support.gVerbose > 0:
+            print()
+            print(Support.myName(), ': Matrix entries:')
+            self.pp(self.aMatrix)
+            #self.pp(self.aMatrix)
+            print()
+            print(Support.myName(), ': V Column entries:')
+            self.pp(self.vColumn)
+            #self.pp(self.vColumn)
+            print()
+            print(Support.myName(), ': I Column entries:')
+            self.pp(self.iColumn)
+            #self.pp(self.iColumn)
     
     def fillVColumn(self, circuit):
         # Make the V column entries Vn if 1 <= i <= nNodes, or In if i>nNodes.
@@ -363,18 +322,17 @@ class CLinearEquations(object):
             print(Support.myName(), ': nNodes=', nn, ', addedNodes=', add)
         while i < nn:
             if i < nn-add:
-                tmp = 'v'
+                tmp = 'V'
                 tmp += str(circuit.getUserNode(i))
                 if Support.gVerbose > 2:
                     print(Support.myName(), ': i=', i, ', label=', tmp)
             else:
-                tmp = 'i'
+                tmp = ''
                 addedNodeNum = i-(nn-add)
                 addedElement = circuit.getAddedNodeElement(addedNodeNum)
                 if Support.gVerbose > 2:
                     print(Support.myName(), ': i=', i, ', addedNodeNum=', addedNodeNum, \
-                    ', addedElement label=', addedElement.getLabel(), \
-                    ', c.iSenseLabel=', addedElement.getISenseLabel())
+                    ', addedElement label=', addedElement.getLabel())
                 labelTmp = addedElement.getLabel()
                 tmp += str(labelTmp)
                 if Support.gVerbose > 2:
@@ -386,14 +344,47 @@ class CLinearEquations(object):
                     sym = sympy.symbols(tmp)
                     self.getVColumn()[i] = sym
                     i += 1
-                    tmp = 'i'
+                    tmp = 'I(' + addedElement.getNode3() + ',' + addedElement.getNode4() + ')'
                     tmp += addedElement.getISenseLabel()
             sym = sympy.symbols(tmp)
             self.getVColumn()[i] = sym
             i += 1
+        
+    def pp(self, mat):
+        #temp = mat.copy()
+        sympy.pprint(mat)
+        
+    def print_HTML(self, something, f):
+        print(type(something))
+        mth = sympy.mathml(sympy.N(something, 2), printer='presentation')
+        mth2 = self.pretty_html(mth)
+        f.write('<math>\n')
+        f.write( mth2 )
+        f.write('<p>')
+        f.write('</math>\n')
+        
+    # Takes a mathml string and makes corrections.
+    def pretty_html(self, strng):
+        p1 = reg.sub(r'<mi>(\w)(\w+)</mi>', r'<msub><mi>\1</mi><mi>\2</mi></msub>', strng)
+        p2 = p1.replace('&InvisibleTimes;', '*')
+        p3 = reg.sub(r'^<mfrac><mrow><mn>1.0</mn><mo>*</mo>', r'<mfrac><mrow>', p2)
+        p4 = reg.sub(r'^<mfrac><mo>-</mo><mn>1.0</mn><mo>*</mo>(.*)', \
+                     r'<mfrac><mrow><mo>-</mo>\1', p3)
 
+        if Support.gVerbose > 2:
+            print(Support.myName(), ' p1=', p1)
+            print(Support.myName(), ' p2=', p2)
+            print(Support.myName(), ' p3=', p3)
+            print(Support.myName(), ' p4=', p4)
+        return p4
+
+    #             i,i        i,j
+    # [  .    .   adm    .  -adm     .]
+    # [  .    .   .      .   .       .]
+    # [  .    .  -adm    .   adm     .]
+    #             j,i        j,j
     def addElementToMatrix(self, i, j, adm):
-        """Add an elements admittance to the matrix"""
+        """Add the elements admittance to the matrix"""
         if i==0 or j==0:
             n=i+j
             self.aMatrix[n, n] += adm
@@ -404,36 +395,43 @@ class CLinearEquations(object):
             self.aMatrix[j, i] -= adm
     
     def addElementToIColumn(self, i, j, cterm):
-        """Add an elements admittance to the i-column"""
+        """Add an elements label to the i-column"""
+        """For the iColumn it matters if one of i or j is zero, which one it is"""
         if Support.gVerbose > 2:
             print(Support.myName(), ': i=', i, ', j=', j, ', cterm=', cterm)
         if i==0:
-            self.iColumn[j] -= cterm
+            self.iColumn[j] += cterm
         elif j==0:
-            self.iColumn[i] += cterm
+            self.iColumn[i] -= cterm
         else:
             self.iColumn[i] += cterm
             self.iColumn[j] -= cterm
 
-    def addSourceToMatrixH(self, i, j, m, adm):
-        """Add a source to the matrix in two different rows, i & j, column m"""
+    #      column:  i            j
+    # row m: [.    adm    .    -adm    .    ]
+    def addSourceToMatrix2C(self, i, j, m, adm):
+        """Add a source to the matrix in two different columns, i & j, row m"""
         if Support.gVerbose > 2:
-            print(Support.myName(), ': i=', i, ', j=', j, ', m=', m, ' adm=', adm)
+            print(Support.myName(), ': row m=', m, ', col i=', i, ' adm=', adm)
+            print(Support.myName(), ': row m=', m, ', col j=', j, ' adm=', -adm)
         if i != 0:
             self.aMatrix[m, i] += adm
         if j != 0:
             self.aMatrix[m, j] -= adm
     
-    def addSourceToMatrixV(self, i, j, m, adm):
-        """Add a source to the matrix in two different columns, i & j, row m"""
+    #       column: m
+    # row i: [.    adm    .]
+    # row j: [.   -adm    .]
+    def addSourceToMatrix2R(self, i, j, m, adm):
+        """Add a source to the matrix in two different rows, i & j, column m"""
         if Support.gVerbose > 2:
-            print(Support.myName(), ': i=', i, ', j=', j, ', m=', m, ' adm=', adm)
+            print(Support.myName(), ': row i=', i, ', col m=', m, ' adm=', adm)
+            print(Support.myName(), ': row j=', j, ', col m=', m, ' adm=', -adm)
         if i != 0:
             self.aMatrix[i, m] += adm
         if j != 0:
             self.aMatrix[j, m] -= adm     
 
-    #self.numer, self.denom = self.linearEquations.applyRelations(self.simpList)
     def gtltSimplify(self, eqn, simpList):
         """Simplify eqn by using x >> y relationships.
         For the numer and denom separately, collect terms of the same order of 's' and factor.
@@ -448,25 +446,23 @@ class CLinearEquations(object):
             print(Support.myName(), 'Begin applyRelations on denom')
         s_denom = self.applyRelationList(d, simpList)
         ratio = s_numer / s_denom
-        e_ratio = sympy.expand(ratio)
-        s_ratio = sympy.simplify(e_ratio)
-        new_n, new_d = sympy.fraction(s_ratio)
-        new_fn = sympy.factor(new_n)
-        new_fd = sympy.factor(new_d)
-        if Support.gVerbose > 2:
+        s_ratio = sympy.simplify(ratio)
+
+        new_ratio = sympy.factor(s_ratio)
+        new_n, new_d = sympy.fraction(new_ratio)
+        
+        if Support.gVerbose > 0:
             print(Support.myName(), 'ratio=', ratio)
-            print(Support.myName(), 'expanded=', e_ratio)
             print(Support.myName(), 'simplified=', s_ratio)
             print(Support.myName(), 'new_n=', new_n)
             print(Support.myName(), 'new_d=', new_d)
-            print(Support.myName(), 'factored(new_n)=', new_fn)
-            print(Support.myName(), 'factored(new_d)=', new_fd)
-        return new_fn, new_fd
+        return new_ratio
 
     def applyRelationList(self, eqn, simpList):
         old_eqn = eqn
-        print('simp list is:')
-        simpList.printSimpList()
+        if Support.gVerbose > 1:
+            print('simp list is:')
+            simpList.printSimpList()
         for rel in simpList.getSimpList():
             new_eqn = self.applyRelation(old_eqn, rel)
             if Support.gVerbose > 1:
@@ -477,18 +473,6 @@ class CLinearEquations(object):
             old_eqn = new_eqn
         return new_eqn
     
-    '''
-        collf = sympy.collect(efn, s, factor, evaluate=False)
-        print('collected by s then factor:', collf)
-        s_part = collf[s]
-        print('s-part=', s_part)
-        fixd = s_part.subs(rf1+rs1, rf1)
-        print('fixd=:', fixd)
-        o_part = coll[1]
-        fixdo = o_part.subs(rf1+rs1, rf1)
-        print('1-part=', o_part)
-        print('fixdo=', fixdo)
-    '''
     def applyRelation(self, eqn, relation):
         s = sympy.symbols('s')
         exp_eqn = eqn.expand()
@@ -496,25 +480,35 @@ class CLinearEquations(object):
         if Support.gVerbose > 2:
             print(Support.myName(), 'eqn to simplify=', exp_eqn)
             print(Support.myName(), 'collected factors=', collf)
-            print(Support.myName(), 'relation:', end=" "), relation.printRelation()
+            print(Support.myName(), 'relation:', end=" "),
+            relation.printRelation()
+            print(Support.myName(), 'smaller relation:', relation.getSmaller())
+            print(Support.myName(), 'bigger relation:', relation.getBigger())
 
         dct = {'1':0, 's':1}
         #    dct., 's**2':2, 's**3':3, 's**4':4, 's**5':5, 's**6':6}
         for x in range(2, 10):
             dct[x] = 's**'+str(x)
-        print('dct=', dct)
+        if Support.gVerbose > 2:
+            print(Support.myName(), 'dct=', dct)
         
         for pows, vals in collf.items():
-            #strng = relation.getSmaller()+"+"+relation.getBigger()
-            strng = str(relation.getSmaller()+"+"+relation.getBigger())
-            subs_from = sympy.sympify(strng)
-            subs_to = sympy.sympify(str(relation.getBigger()))
-            if Support.gVerbose > 3:
-                print(Support.myName(), 'small=', relation.getSmaller(), ' big=', relation.getBigger())
+            #tmp = vals.factor()
+            #print('applyRelation: vals.factor()=', tmp)
+            #temp_str = relation.getSmaller()+"+"+relation.getBigger()
+            add_1 = sympy.sympify(relation.getSmaller(), {'re': sympy.Symbol('re')} )
+            add_2 = sympy.sympify(relation.getBigger(), {'re': sympy.Symbol('re')} )
+            subs_from = add_1 + add_2
+            #temp_str = repr(relation.getSmaller() + relation.getBigger())
+            #subs_from = sympy.sympify(temp_str)
+            subs_to = sympy.sympify(relation.getBigger())
+            if Support.gVerbose > 2:
+                print(Support.myName(), 'subs_from=', subs_from)
+                print(Support.myName(), 'subs_to=', subs_to)
                 print(Support.myName(), 'subs_from=', subs_from, '  subs_to=', subs_to)
                 print(Support.myName(), 'power=', pows, '  old val=', vals)
             new_vals = vals.subs(subs_from, subs_to)
-            if Support.gVerbose > 3:
+            if Support.gVerbose > 2:
                 print(Support.myName(), 'power=', pows, '  new val=', new_vals)
             collf[pows] = new_vals
             
@@ -529,8 +523,8 @@ class CLinearEquations(object):
         
         return ans
 
-    def substituteEqns(self, subList):
-        temp = self.answer
+    def subEqns(self, eqn, subList):
+        temp = eqn.copy()
         for s in subList:
             sym_from = sympy.sympify(s[0])
             sym_to = sympy.sympify(s[1])
@@ -538,18 +532,18 @@ class CLinearEquations(object):
             if Support.gVerbose > 2:
                 print(Support.myName(), 'After replacing ', sym_from, ' with ', sym_to, ', solution is: ')
                 print(temp)
-        #self.evalAnswer = temp
         return temp
 
-    def substituteValues(self, eList):
-        """Sub numerical values into eqn. Varlist is a list of strings in the form
+    def subValues(self, eqn, eList):
+        """Sub numerical values into eqn. elist is a list of strings in the form
         element=value, eg r1=1k or e1=10.0
         """
-        temp = self.answer
+        temp = eqn
         for element in eList:
             if element.valueIsSet():
                 if Support.gVerbose > 2:
-                    print(Support.myName(), 'Substituting', element.getLabel(), '=', element.getValue(), 'into the solved equations')                
+                    print(Support.myName(), 'Substituting', element.getLabel(), '=', \
+                          element.getValue(), 'into the solved equations')                
                 sym = sympy.symbols(element.getLabel())
                 flt = float(eno.EngNumber(element.getValue()))
                 temp = temp.subs({sym: flt})
@@ -557,24 +551,39 @@ class CLinearEquations(object):
                     print(Support.myName(), 'After sub, solution is: ')
                     print(temp)
         
+        # Needs to be saved since this is the one we need if plotting it requested.
         self.evalAnswer = temp
+
         return self.evalAnswer
-        # Can't set self.answer to evalAtFreq result since plotting needs the equation without
-        # the freq being substituted in.
-        #if self.freq is not None:
-            #return self.evalAtFreq(self.freq)
-        #else:
-            #return self.answer
 
     def evalAtFreq(self, frq):
-        if self.evalAnswer is not None:
-            temp = self.evalAnswer
-            sym = sympy.symbols('s')
-            jw = frq*2*sympy.pi*sympy.I
-            temp = temp.subs({sym: jw})
-            if Support.gVerbose > 3:
-                print(Support.myName(), 'Subs', sym, ' for ', jw, '. Now:')
-                print(temp)
-            return temp
-        else:
-            return None
+        temp = self.evalAnswer
+        sym = sympy.symbols('s')
+        jw = frq*2*sympy.pi*sympy.I
+        temp = temp.subs({sym: jw})
+        if Support.gVerbose > 3:
+            print(Support.myName(), ': Subs', sym, ' for ', sympy.N(jw, 5), '. Now:', end='')
+            print(sympy.N(temp, 5))
+        return temp
+    
+    def eeForm(self, eqn):
+        ''' Put the passed eqn into 'EE' form- with the highest coeff of 's'
+        denom being 1 by dividing top and bottom by whatever the coeff is.'''
+        numer, denom = sympy.fraction(eqn)
+        s = sympy.symbols('s')
+        hi_order_n = degree(numer, gen=s)
+        hi_order_d = degree(denom, gen=s)
+        if hi_order_n > hi_order_d:
+            coeff = numer.coeff(s, hi_order_n)
+        else: 
+            coeff = denom.coeff(s, hi_order_d)
+        new_numer = sympy.expand(numer / coeff)
+        new_denom = sympy.expand(denom / coeff)
+        return new_numer, new_denom
+        
+        
+        
+        
+        
+
+            

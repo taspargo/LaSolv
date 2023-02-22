@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box;
+}
+.column {
+   float: left;
+   width: 45%;
+   padding: 10px;
+   height: 90px;
+}
+.row:after {
+   content: "";
+   display: table;
+   clear: both;
+}
+</style>
+</head>
+<body>
+<center><h2><FONT COLOR="rebeccapurple">LaSolv: The Laplacian Circuit Solver</FONT></h2></center>
+<center><h3>* Solving nodal equations without the headache *</h3></center>
+<center><h3><i>Now With Simplifying Equations and Substitution!!</i></h3></center>
+
+<p>LaSolv is used to solve an AC representation of an electrical circuit
+using just symbols (and optionally numbers). 
+It reads in a text file- similar to a SPICE circuit file- that represents the 
+circuit. It then solves it in much the same way that you would do it by hand. 
+The circuit can be made of resistors, capacitors, inductors, mutual inductors, 
+transformers, voltage/current sources, or controlled sources. They are connected 
+together using node numbers; nodes can only be integers, with ground always 
+being node 0. Currently only one input source is allowed. If a circuit with 
+more than one input needs to be solved, use superposition. The results can be 
+confusing if more than one independent source is supplied.
+<p>After the component type identifier is a unique label for that component. The
+component type letter and label are case-insensitive. Tabs or spaces can 
+separate labels and nodes.
+<p>The ability to simplify the equation using &lt&lt and &gt&gt relationships 
+has been added. For instance, if a circuit has values for Re and Rl, and Rl is 
+much larger than Re, the equation can be simplified by replacing (Re+Rl) with 
+Rl. A common simplification in circuits with local feedback is to replace 
+(Rl*gm+1) with Rl*gm.
+<p>Substituting common groups of variables for other well-known variables is now
+supported. The quantity &beta; is equal to Rpi*gm, so you might want all 
+instances of Rpi*gm to be replaced with &beta;.
+<p>Component values are optional but can be supplied (denoted as 
+&ltvalue&gt in the definitions below). If they are, the solution equation
+with their values substituted in is also shown. They use the usual
+units for each component- ohms, amps, farads, etc. Standard
+engineering units are allowed- k, M, p, etc. Currently the units can't be 
+specified- pF, mH etc., just use the units suffix- 100p, 10n, 5.5M.
+<p>If the component values are supplied for all elements (except vxxx and ixxx 
+sources), the equation can be plotted. The frequency will be selected
+automatically if either the 'Freq start' or 'Freq stop' fields are empty. 
+If both fields have values, they will be used for the x-axis limits. 
+The magnitude can be linear or in dB. The result can be also be plotted in 
+real and imaginary parts, or as an RC or RL equivalent circuit. The real/imaginary 
+and RC/RL circuit can use either a series or parallel model. This
+is useful when looking at impedances or trans-impedances.
+<p>
+<H2><FONT COLOR="C04040">Important info about a known bug</FONT></H2>
+<p>There is currently a bug in one of the libraries that LaSolv uses which
+will cause it to crash if 're' is used as a component name- such as
+the emitter resistance in a bipolar device. To get around this bug, use 'Re' or
+'r_e', anything except 're'. As soon as the library gets fixed, this will go
+away.
+<p>
+<H2><CENTER><FONT COLOR="#000099">Basic Components</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Resistors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Rxxxx N1 N2 &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>R1 1 2 100</TT></DD>
+	<DD><TT>RC1 12 17 1K</TT></DD>
+</DL>
+<TT>N1 and N2 are the two element nodes. </TT>
+
+<H3><FONT COLOR="#006600">Capacitors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Cxxxx N+ N- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>C11 1 2</TT></DD>
+	<DD><TT>Cout 12 17 1u</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes.</TT>
+
+<H3><FONT COLOR="#006600">Inductors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Lxxxx N+ N- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Lin 3 2</TT></DD>
+	<DD><TT>Lbw 2 9 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes.</TT>
+
+<H3><FONT COLOR="#006600">Mutual Inductors</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Mxxxx N+ N- Lm Ln &ltvalue&gt</TT></DD>
+	<DD><TT>Mxxxx N+ N- Lm Ln &ltk[=]value&gt</TT></DD>
+	<DD><TT>Mxxxx N+ N- Lm Ln &ltm[=]value&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Mcpl 6 11 L1 L2</TT></DD>
+	<DD><TT>Mcpl 6 11 L1 L2 0.2</TT></DD>
+	<DD><TT>M2 8 10 Ln Lp k=0.2</TT></DD>
+	<DD><TT>M3 1 13 Ln Lp m 2n</TT></DD>
+</DL>
+<TT>This element indicates coupling between two inductors. The most common example is a 
+transformer. The coupling factor, k, ranges from 0 to 1 inclusive. An ideal transformer 
+has k=1. The turns ratio is equal to Sqrt(L1/L2), and this is also the voltage ratio. 
+Adding a mutual 
+inductor splits the inductance of L1 and L2 into two parts- their self inductance, and 
+the inductance that they share. As an example, suppose L1 = 10 nH, L2 = 4 nH, and a 
+mutual inductor of 2 nH is added between them with k = 0.3. The new values
+will be L1 = 7 nH, L2 = 2.8 nH. The turns ratio would be sqrt(10/4) = 1.58
+N+ and N- are the two element nodes.</TT>
+
+<H3><FONT COLOR="#006600">Ideal Transformer</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Txxxx P+ P- S+ S- &ltturns ratio&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Tpwr 8 0 14 0</TT></DD>
+	<DD><TT>Tpwr 3 5 14 13 3</TT></DD>
+</DL>
+<TT>A lossless, 100% coupled transformer. As with other elements, the value (turns ratio in 
+this case) is optional. If omitted, the element name with "tr" appended will be used in the
+ equation. For instance, if the transformer label is T100 the corresponding variable for 
+the turns ratio be T100tr. P+ and P- are the connections to the primary; S+ and S- are the 
+secondary connections. If the turns ratio is > 1, then the primary side will have the 
+higher voltage across it.</TT>
+
+<H2><CENTER><FONT COLOR="#000088">Voltage and Current Sources</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Independent Sources</FONT></H3>
+<div class="row">
+   <div class="column">
+      <DL>
+			<DT><B>General form:</B></DT>
+			<DD><TT>Vxxxx N+ N- &ltvalue&gt</TT></DD>
+			<DD><TT>Ixxxx N+ N- &ltvalue&gt</TT></DD>
+      </DL>
+   </div>
+   <div class="column">
+      <canvas id="myCanvas" width="200" height="100">
+			Error: Browser does not support the canvas element.
+      </canvas>
+		<script>
+			var c=document.getElementById("myCanvas");
+			var ctx = c.getContext("2d");
+			// Voltage source circle
+			ctx.arc(40, 50, 20, 0, 2*Math.PI);
+			ctx.stroke();
+			// VS terminals
+			ctx.beginPath();
+			ctx.moveTo(40, 30);
+			ctx.lineTo(40, 10);
+			ctx.moveTo(40, 70);
+			ctx.lineTo(40, 90);
+			ctx.stroke()
+			// VS +
+			ctx.beginPath();
+			ctx.moveTo(35,42);
+			ctx.lineTo(45,42);
+			ctx.moveTo(40,37);
+			ctx.lineTo(40,47);
+			// VS -
+			ctx.moveTo(35,59);
+			ctx.lineTo(45,59);
+			// VS terminal labels
+			ctx.font = "14px Palatino";
+			ctx.fillText("N+", 16, 20);
+			ctx.fillText("N-", 16, 90);
+			// VS + tive current flow
+			ctx.moveTo(70,20);
+			ctx.lineTo(70,80);
+			ctx.moveTo(66,73);
+			ctx.lineTo(70,80);
+			ctx.moveTo(74,73);
+			ctx.lineTo(70,80);
+			// Label current flow
+			ctx.fillText("+ I", 61, 15)
+			// Current source circle
+			ctx.moveTo(150, 50);
+			ctx.arc(130, 50, 20, 0, 2*Math.PI);
+			ctx.stroke();
+			// CS terminals
+			ctx.moveTo(130, 30);
+			ctx.lineTo(130, 10);
+			ctx.moveTo(130, 70);
+			ctx.lineTo(130, 90);
+			ctx.stroke();
+			// CS arrow
+			ctx.moveTo(130,37);
+			ctx.lineTo(130,60);
+			ctx.moveTo(126,53);
+			ctx.lineTo(130,60);
+			ctx.moveTo(134,53);
+			ctx.lineTo(130,60);
+			ctx.stroke();
+			// CS terminal labels
+			ctx.fillText("N+", 106, 20);
+			ctx.fillText("N-", 106, 90);
+			// CS + tive current flow
+			ctx.moveTo(160,20);
+			ctx.lineTo(160,80);
+			ctx.moveTo(156,73);
+			ctx.lineTo(160,80);
+			ctx.moveTo(164,73);
+			ctx.lineTo(160,80);
+			ctx.stroke();
+			// Label current flow
+			ctx.fillText("+ I", 151, 15);
+		</script>
+	</div> 
+</div>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Vin 1 0</TT></DD>
+	<DD><TT>Vsense 2 9</TT></DD>
+	<DD><TT>Iin 1 0</TT></DD>
+	<DD><TT>Iout 2 9</TT></DD>
+</DL>
+<p>
+<TT>N+ and N- are the two element nodes. These two sources do not need a value to be
+associated with them. For a voltage source, positive current flows into the positive terminal,
+through the source, and out of the negative terminal. For the current source, positive current
+flows into the positive terminal, through the source, and out of the negative terminal. 
+Note that a grounded voltage source with a positive voltage, you'd use:
+<DL>
+	<DT><B><TT>Vcc	5	0</TT></B></DT>
+</DL>
+While a current source that pushes current in the direction of the arrow is:
+<DL>
+	<DT><B><TT>Icc	0	5</TT></B></DT>
+</DL>
+This applies to both independent and dependent voltage and current sources. 
+In addition to being input sources, a voltage source is also used to
+sense the control current for current controlled voltage sources and current controlled 
+current sources. Remember that for a voltage source, positive current goes into the '+' node 
+and exits the '-' node.</TT>
+
+<H3><FONT COLOR="#006600">Linear Dependent Sources</FONT></H3>
+<H4><FONT COLOR="#00AA00">Voltage Controlled Voltage Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Exxxx N+ N- C+ C- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>E1 3 2 3 0</TT></DD>
+	<DD><TT>egn 2 9 3 4 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. C+ and C- are the nodes defining the controlling voltage. '&ltvalue&gt', if supplied, is the voltage gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Current Controlled Current Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Fxxxx N+ N- vname &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>F1 3 2 vsense</TT></DD>
+	<DD><TT>fout 2 9 vp 1n</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. 'vname' is the name of the voltage source that carries
+the controling current. Postive controlling current (through the voltage source) is into the
+positive node, through the
+source, and out of the negative node. '&ltvalue&gt', if supplied, is the current gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Voltage Controlled Current Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Gxxxx N+ N- C+ C- &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>G0 3 2 4 3 0.12</TT></DD>
+	<DD><TT>gm 2 9 5 0</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. C+ and C- are the nodes defining the controlling
+voltage. '&ltvalue&gt', if supplied, is the trans-conductance gain.</TT>
+
+<H4><FONT COLOR="#00AA00">Current Controlled Voltage Source</FONT></H4>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>Hxxxx N+ N- vname &ltvalue&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>Hx 0 4 vsense</TT></DD>
+	<DD><TT>hout 11 9 vp 1k</TT></DD>
+</DL>
+<TT>N+ and N- are the two element nodes. 'vname' is the name of the voltage source that carries
+the controling current. Positive controlling current (through the voltage source) is into the
+positive node, through the
+source, and out of the negative node. '&ltvalue&gt', if supplied, is the trans-resistance gain.</TT>
+
+<H2><CENTER><FONT COLOR="#000099">Controls</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Solve</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Solve N1 N2 N3 N4</TT></DD>
+	<DD><TT>Solve N1 N2 indep-src</TT></DD>
+	<DD><TT>Solve indep-src N1 N2</TT></DD>
+	<DD><TT>Solve indep-src1 indep-src2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>solve 10 2 0 100		; Solve for voltage gain, v(10,2)/v(0,10)</TT></DD>
+	<DD><TT>solve vin iin			; Solve for current gain, i(vin)/iin</TT></DD>
+	<DD><TT>solve vin 10 0			; Solve for transconductance, i(vin)/v(10,0)</TT></DD>
+	<DD><TT>solve iout iin			; Solve for current gain, iout/iin</TT></DD>
+	<DD><TT>solve 15 2 iin			; Solve for transresistance, v(15,2)/iin</TT></DD>
+</DL>
+<TT>Specifies what circuit quantities to solve for. Only one solve statement is allowed per input
+file. The output is specified first, then the input. Voltages must be specified with both
+the positive and negative nodes. Currents can be indentified either by the name of the voltage source
+they pass through, or with a current source.</TT>
+
+<H3><FONT COLOR="#006600">Simplify</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Si var1 &gt&gt var2</TT></DD>
+	<DD><TT>Si var1 &lt&lt var2</TT></DD>
+	<DD><TT>Si var1 &gt var2</TT></DD>
+	<DD><TT>Si var1 &lt var2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>simplify Re &lt Rload	; Assume Re &lt&lt Rload</TT></DD>
+	<DD><TT>simp Cpi &gt Cmu		; Assume Cpi &gt&gt Cmu</TT></DD>
+	<DD><TT>sim rs &gt re			; Assume rs &gt&gt re</TT></DD>
+	<DD><TT>si Cc &lt Cmu			; Assume Cc &lt&lt Cmu</TT></DD>
+</DL>
+<TT>Indicates one variable is much smaller or larger than another; attempt to use this relationship
+to simplify the solution. The two variables much be of the same element type- two resistors, caps,
+inductors, etc. (Currently this is not verified and won't cause a warning.) 
+</TT>
+
+<H3><FONT COLOR="#006600">Substitute</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Su var1  var2</TT></DD>
+	<DD><TT>Sub var1 var2</TT></DD>
+	<DD><TT>Subs var1 var2</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>sub gm*Rpi  Beta	; Change occurances of gm*Rpi to Beta</TT></DD>
+	<DD><TT>su Rout/Ic  Va		  ; Change Rout/Ic to Va (Early voltage)</TT></DD>
+</DL>
+<TT>Substitute one expression for another to make the solution more readable or use more commonly
+known variables..
+</TT>
+
+<H3><FONT COLOR="#006600">Frequency</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>F)requency number</TT></DD>
+	<DD><TT>F number</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>freq 500M</TT></DD>
+	<DD><TT>frequency 10M</TT></DD>
+	<DD><TT>f 88k</TT></DD>
+</DL>
+<TT>Specifies the frequency at which the solution is evaluated.</TT>
+
+<H3><FONT COLOR="#006600">Output</FONT></H3>
+<DL>
+	<DT><B>General forms:</B></DT>
+	<DD><TT>Output &ltfilename&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>output			; Send the solution to an HTML file with the same name as the circuit file.</TT></DD>
+	<DD><TT>output zin.html	; Send the solution to the file gain.html</TT></DD>
+	<DD><TT>output gain.htm	; Send the solution to the file zin.htm</TT></DD>
+</DL>
+<TT>Outputs the results into an HTML file (in addition to the screen) for easier reading. Only one output
+statement is allowed per input file. If the filename is omitted, the name of the cicuit file is used 
+and '.html' is appended ('.htm' if ran on a Windows machine). If your browser supports Mathml, that is used
+to make the equations look even prettier. Currently Google Chrome doesn't support this. Safari and IE do. The
+Safari version of the Mathml printer has a bug which causes any component names with a number in them to become
+invisible. A workaround has been implemented but it isn't perfect yet.</TT>
+
+<H2><CENTER><FONT COLOR="#000099">Miscellaneous</FONT></CENTER></H2>
+<H3><FONT COLOR="#006600">Comments</FONT></H3>
+<DL>
+	<DT><B>General form:</B></DT>
+	<DD><TT>* &lt....text....&gt</TT></DD>
+	<DD><TT>; &lt....text....&gt</TT></DD>
+</DL>
+<DL>
+	<DT><B><TT>Examples:</TT></B></DT>
+	<DD><TT>* This is a common emitter stage.</TT></DD>
+	<DD><TT>; Solve for the output impedance of the emitter follower.</TT></DD>
+	<DD><TT>gm 1 0 4 3 0.1m		; Models the output impedance.</TT></DD>
+</DL>
+<TT>Comments can start anywhere in a line, anything after the '*' or ';* is ignored.</TT>
+
+<H3><FONT COLOR="#006600">Engineering Notation</FONT></H3>
+<STYLE>
+	table {
+		border-collapse: collapse;
+		width: 30%;
+	}
+	th, td {
+		border: 1px solid blue;
+		padding: 5px;
+		text-align: center;
+		vertical-align: middle;
+	}
+</STYLE>
+<DL><CENTER>
+	<TABLE>
+	<TR><DD><TT>
+		<TH>Suffix</TH>
+		<TH>Symbol</TH>
+		<TH>Base</TH>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>yocto</TD>
+		<TD>y</TD>
+		<TD>1e-24</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>zepto</TD>
+		<TD>z</TD>
+		<TD>1e-21</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>atto</TD>
+		<TD>a</TD>
+		<TD>1e-18</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>femto</TD>
+		<TD>f</TD>
+		<TD>1e-15</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>pico</TD>
+		<TD>p</TD>
+		<TD>1e-12</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>nano</TD>
+		<TD>n</TD>
+		<TD>1e-9</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>micro</TD>
+		<TD>u</TD>
+		<TD>1e-6</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>milli</TD>
+		<TD>m</TD>
+		<TD>1e-3</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>kilo</TD>
+		<TD>k</TD>
+		<TD>1e3</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Mega</TD>
+		<TD>M</TD>
+		<TD>1e6</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Giga</TD>
+		<TD>G</TD>
+		<TD>1e9</TD>
+	</TT></DD></TR>
+	<TR><DD><TT>
+		<TD>Tera</TD>
+		<TD>T</TD>
+		<TD>1e12</TD>
+	</TT></DD></TR>
+	</TABLE>
+</CENTER></DL>
+
+<H3><FONT COLOR="#006600">Example Circuit</FONT></H3>
+<DL>
+	<DT><TT>vin   1    0</TT></DT>
+	<DT><TT>r3    2    1    29k</TT></DT>
+	<DT><TT>cp    2    3    10n</TT></DT>
+	<DT><TT>vs    3    0</TT></DT>
+	<DT><TT>* Fout is a current controlled current source, the</TT></DT>
+	<DT><TT>* current though 'vs' senses the controlling current.</TT></DT>
+	<DT><TT>Fout  0    4    vs</TT></DT>
+	<DT><TT>rm1   4    0    400</TT></DT>
+	<DT><TT>rm2   4    5    200</TT></DT>
+	<DT><TT>cm1   5    0    1n</TT></DT>
+	<DT><TT>gm1   6 0 5 0 0.15</TT></DT>
+	<DT><TT>rld   6 0 100</TT></DT>
+	<DT><TT>* Solves for voltage across rld/vin</TT></DT>
+	<DT><TT>solve 6 0 1 0</TT></DT>
+</DL>
+</body>
+</html>
+

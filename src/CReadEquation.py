@@ -32,59 +32,60 @@ class CReadEquation(object):
     classdocs
     '''
 
-    def __init__(self, params):
+    def __init__(self, theLines):
         '''
         Constructor
         '''
-        self.inFile = None
+        self.theLines = theLines
     
-    def readEquationGivenFilename(self, filename):
-        f = open(filename, 'r')
-        theEquation = self.readEquationFromOpenFile(f)
-        return theEquation
-    
-    def readEquationFromOpenFile(self, fid):
-        
-        #saveVerbose = Support.gVerbose
-        #Support.gVerbose = 0
-        line = fid.readline()
-        if Support.gVerbose > 2:
-            print(Support.myName(), ': numer string=', line)
+    def nextLine(self, inx):
+        line = self.theLines[inx]
+        return inx+1, line
+
+    # Input: index pointing at the 'answer' keyword line
+    # Output: index pointing at the last line used, the test answer
+    def readEquationFromList(self, inx):
+        try:
+            inx, line = self.nextLine(inx+1)
+        except IndexError:
+            print(Support.myName(), "Index error when attempting to read The Answer. It probably just isn't  there")
+            return inx+1, sympy.sympify('0.0')
+        if Support.gVerbose > 1:
+            print(Support.myName(), ': Convert string to numer:', line)
         numer = self.readCPoly(line)
         if numer != 0:
             if Support.gVerbose > 1:
-                print(Support.myName(), ': Read numerator:', line)
-            line = fid.readline()       # Should be '-----'
+                print(Support.myName(), ': numerator:', numer)
+
+            inx, line = self.nextLine(inx)      # Should be '------'
             if Support.gVerbose > 1:
                 print(Support.myName(), ': Read line separator:', line)
-            line = fid.readline()
-            if Support.gVerbose > 2:
-                print(Support.myName(), ': denom string=', line)
-                
-
+            inx, line = self.nextLine(inx)
             if Support.gVerbose > 1:
-                print(Support.myName(), ': Read denominator:', line)
+                print(Support.myName(), ': Convert string to denom=', line)
+            #if line != '1.0':
             denom = self.readCPoly(line)
+            #else:
+            #    denom = 1.0
+            if Support.gVerbose > 1:
+                print(Support.myName(), ': denominator:', denom)
             if denom != 0:
                 theEquation = numer / denom
-                r__e, re = sympy.symbols('r__e re')
-                theEquation = theEquation.subs(r__e, re)
                 if Support.gVerbose > 0:
                     print(Support.myName(), ': theEquation=', theEquation)
-                #Support.gVerbose = saveVerbose
-                return theEquation
+                return inx, theEquation
             else:
                 print(Support.myName(), ': Read denominator = 0')
-                return 0.0
+                return inx, 0.0
         else:
             print(Support.myName(), ': Read numerator = 0')
-            return 0.0
+            return 0.0, 0.0
+        return inx, theEquation
     
     def readCPoly(self, string):
-        # Need to search for 're' and sub in r__e to prevent an error from sympy. It
-        # may be interpreting the string and thinking re means 're' as in regular expression.
-        string = string.replace('re', 'r__e')
-        sympi = sympy.sympify(string)
+        # Don't need to sub r__e for re anymore; it was trying to use 're' as in real().
+        # {'re':sympy.Symbol('re') } forces it to use the Sympy symbol 're'.
+        sympi = sympy.sympify(string.lower(), {'re':sympy.Symbol('re')})
+        sympi.as_poly(extension=True)
         return sympi
         
-            

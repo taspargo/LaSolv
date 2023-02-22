@@ -24,27 +24,27 @@ Created on Nov 26, 2016
 
 #import inspect
 import wx
-import sys
+import traceback
 
-gVerbose = 4
+# 0 to 4?
+gVerbose = 0
         
 #def myName(self):
     #return self.__class__.__name__ + '::' + inspect.stack()[1][3]
 
 def myName():
-    import traceback
     return traceback.extract_stack(None, 2)[0][2]
 
-# 1    Not used
-# 2    Maxnodes exceeded.                        CCircuit, addNode
-# 3    Source node 1 doesn't exist.              CCircuit, renumberSourceNodes
-# 4    Source node 2 doesn't exist in source.    CCircuit, renumberSourceNodes
+# 1    Node not found in reverselookup           CCircuit, reverseLookup
+# 2    Current for a controlling src not found   CCircuit, calculateVorIEqn
+# 3    Node in o/p source spec doesn't exist.    CCircuit, renumberSourceNodes
+# 4    Node in i/p source spec doesn't exist.    CCircuit, renumberSourceNodes
 # 5    Added element with 'label' not found      CCircuit, getAddedNodeElementIndex
 # 6    Source with name 'label' not found        CCircuit, calculateVorIEqn
 # 7    Source element type not v or i            CCircuit, calculateVorIEqn
 # 8    Computer type not found                   CFileReader, init
 # 9    Solve element not found                   CFileReader, init
-# 10   Unknown element found                     CFileReader, init
+# 10   Unknown element found                     CFileReader, init; CLinearEq, fillAMatrix
 # 11   None-numeric node name                    CFileReader, parseSolveStatement
 # 12   Incorrect solve statement syntax          CFileReader, parseSolveStatement
 # 13   Solve statement with unknown source, V/I  CFileReader, parseSolveStatement
@@ -58,19 +58,27 @@ def myName():
 # 21   F or H element, c-sense isn't an IVS      CFileReader, parseElement
 # 22   F or H element, non-numeric nodes         CFileReader, parseElement
 # 23   F or H element uses a non-existent source CFileReader, verifyIVSforFandHElements
-# 24   Unknown element found                     CLinearEquations, fillAMatrix
+# 24   More than one stimulus source found       CFileReader, verifyIVSforFandHElements
 # 25   Reorder equations failed                  CLinearEquations, solveEquations
-# 26   Matrix cannot be solved                   eqnSolver, calling solveEquations
+# 26   Floating node on current source           CFileReader, checkForFloatingNodes
 # 27   Could not find file/path                  CFileReader, init
 # 28   Permissions error when opening file       eqnSolver, createHTMLFile
 # 29   Unknown relational operator in simplify   CFileReader
+# 30   Denominator is zero                       eqnSolver, eqnSolve
+# 31   Numerator is zero                         eqnSolver, eqnSolve
+# 32   Mutual inductor 'm' or 'k' not used.      CFileReader, parseElement
+# 33   Mutual inductor, non-L coupling           CFileReader, parseElement
+# 34   M element, k or m supplied but no value   CFileReader, parseElement
+# 35   M element, coupled ind not in ckt         CFileReader, parseElement
+# 36   Eqn has no freq dependence, trivial plot  eqnSolver, eqnPlot
+# 37   Eqn is unstable, can't plot it.           eqnSolver, eqnPlot
 
 err_list = [ \
 "Zero",
-"Not used",
-"Maxnodes exceeded.",                        
-"Source node 1 doesn't exist.",             
-"Source node 2 doesn't exist in source.",  
+"Node not found in reverse lookup",
+"Controlling source current couldn't be calculated",           
+"Node in output source doesn't exist.",             
+"Node in input source doesn't exist.",  
 "Added element with 'label' not found",   
 "Source not found" ,     
 "Source element type not v or i",
@@ -90,25 +98,38 @@ err_list = [ \
 "F or H element, c-sense isn't an IVS",
 "F or H element, non-numeric nodes",
 "F or H element uses a non-existent source",
-"Unknown element found",
+"More than one independent source being used as a stimulus",
 "Reorder equations failed",
-"Matrix cannot be solved",
+"Floating node on a current source",
 "Could not find file/path",
 "Permissions error when opening file",
-"Unknown relational operator in simplify statement"]
+"Unknown relational operator in simplify statement",
+"Denominator is zero",
+"Numerator is zero",
+"Mutual inductor found with value specification not using 'k' or 'm'",
+"Mutual inductor found with non-inductors specified for coupling elements",
+"Mutual inductor found with 'k' or 'm' supplied but no value or name",
+"Mutual inductor found referencing a non-existent coupling element",
+"Plot is flat, no frequency dependence.",
+"This circuit is unstable, can't plot the equation"
+]
 
-def myExit(code, ):
+def myExit(code, errMssg=''):
     if code <= len(err_list):
         print('*'*(len(err_list[code])+11))
         print("Error #{0:2}: {1:}".format(code, err_list[code]))
+            
         print('*'*(len(err_list[code])+11))
     else:
         print('?'*50)
         print('An unknown error occurred: code', code)
         print('?'*50)
         
-    wx.MessageBox("Error #{0:2}: {1:}".format(code, err_list[code]), \
-                  'Error', wx.OK | wx.ICON_ERROR)
+    mssg = "Error #{0:2}: {1:}".format(code, err_list[code])
+    if errMssg != '':
+        mssg = mssg + '\n' + errMssg
+    wx.MessageBox(mssg, 'Error', wx.OK | wx.ICON_ERROR)
+    return code
     #sys.exit(code)
 
 

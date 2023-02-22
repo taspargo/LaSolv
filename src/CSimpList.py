@@ -1,8 +1,27 @@
+"""
+Copyright 2019 Thomas Spargo
+
+This file is part of LaSolv.
+
+    LaSolv is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    LaSolv is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with LaSolv.  If not, see <https://www.gnu.org/licenses/>.
+"""
 '''
 Created on Sep 29, 2019
 
 @author: Thomas
 '''
+import Support
 
 class Relation(object):
     '''
@@ -10,9 +29,18 @@ class Relation(object):
     solution equation
     '''
     
-    def __init__(self, smaller, bigger):
-        self.small = smaller
-        self.big = bigger
+    def __init__(self, first, relation, second):
+        # Always put simpList entries in the order [smaller, bigger]
+        if relation in ['<', '<<']:
+            self.small = first
+            self.big = second
+        elif relation in ['>', '>>']:
+            self.small = second
+            self.big = first
+        else:
+            print(Support.myName(), \
+                  ': Simplify command with unknown operator:', relation)
+            Support.myExit(29)
     
     def getRelation(self):
         return [self.small, self.big]
@@ -56,6 +84,5 @@ class SimpList(object):
     def printSimpList(self):
         for it in self.simpList:
             it.printRelation()
-        
         
         
