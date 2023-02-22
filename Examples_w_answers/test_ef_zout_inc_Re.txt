@@ -1,0 +1,19 @@
+;
+; tests emitter follower gain
+; Added Cpi
+; Includes emitter degen Re
+r1 22 0 100
+r2 22 44 800
+c 22 44 10p
+g 0 44 22 44 0.1
+re 44 0 100
+iin  0 44
+
+solve 44 0 iin
+
+output test
+
+answer
+c*r1*r2*re*s + r1*re + r2*re
+————————————————————————————————————————————————
+c*r1*r2*s + c*r2*re*s + g*r2*re + r1 + r2 + re

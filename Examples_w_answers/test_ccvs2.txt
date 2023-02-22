@@ -1,0 +1,14 @@
+;
+; Test H element, CCVS
+; Vin, solve for V/I
+Vin 1 0
+R2 1 0
+R3 1 2
+H1 3 0 2 0
+R5 3 0
+solve 3 0 Vin
+
+answer
+-H1*R2
+======
+R2+R3

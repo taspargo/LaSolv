@@ -1,0 +1,15 @@
+;
+; another f element test (cccs)
+vin 1 0
+Ra 1 2
+Fa 0 3 2 0
+Rc 3 0
+Rd 3 0
+solve 3 0 vin
+; note that we are looking for V3/I(v1)…
+; should be (f*rc)/1
+
+answer
+-Fa*Rc*Rd
+———————
+Rc + Rd

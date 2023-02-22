@@ -1,0 +1,22 @@
+;
+; Gain of a cascode (CE then CB) stage
+; Vout / Vin, with a Cpi in the CE stage only
+Vin 1 0
+Rs 1 2
+Rpce 2 3 
+Cpce 2 3 
+Re 3 0
+Gmce 4 3 2 3 
+
+Gmcb 5 4 0 4 
+Ro 5 4 
+Rl 5 0 
+
+solve 5 0 1 0
+
+output test
+
+answer
+                   -Gm1*Gm2*Rl*Ro2*Rp1*Rp2 - Gm1*Rl*Rp1*Rp2
+The solution is = —————————————————————
+                   (Gm2*Ro2*Rp2 + Rl + Ro2 + Rp2)*(Cp1*Re*Rp1*s + Cp1*Rp1*Rs*s + Gm1*Re*Rp1 + Re + Rp1 + Rs)

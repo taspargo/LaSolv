@@ -1,0 +1,15 @@
+;
+; Test H element, CCVS
+;  Vin, I/I out
+; 
+Vin 1 0
+Ra 1 0
+Rb 1 2
+Ha 4 0 2 0 
+Rd 4 0
+solve Rd Vin
+
+answer
+-Ha*Ra
+=========
+Rd*(Ra+Rb)

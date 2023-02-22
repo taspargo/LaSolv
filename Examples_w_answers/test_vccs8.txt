@@ -1,0 +1,14 @@
+;
+; tests vccs element
+Iin 1 0
+Ra 1 0
+Rb 1 0
+Gm 0 3 0 1
+Vo 3 4
+Rc 4 0
+solve Vo Iin
+
+answer
+gm*ra*rb
+—————
+Ra+Rb

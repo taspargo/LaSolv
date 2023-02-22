@@ -1,0 +1,14 @@
+;
+; tests cccs element
+Iin 0 1
+Ra 1 0
+Rb 2 0
+Fa 0 5 1 2
+Rc 5 0
+Rd 5 0
+solve 5 0 Iin
+
+answer
+Fa*Ra*Rc*Rd
+=============
+(Ra+Rb)*(Rc+Rd)

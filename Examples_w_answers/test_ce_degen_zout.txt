@@ -1,0 +1,13 @@
+; output imp of a CE with degen
+Rb 1 0 100
+Rpi 1 2 3k
+Cpi 1 2 33p
+Gm 0 2 1 2 0.125
+Re 2 0 100
+Io 0 2
+solve 2 0 Io
+
+answer
+Re*(Cpi*Rpi*Rb*s + Rb + Rpi)
+—————————————————————————————
+Cpi*Rpi*s*(Rb+Re) + Rpi*(Gm*Re+1) + Rb + Re

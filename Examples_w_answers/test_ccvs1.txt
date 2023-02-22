@@ -1,0 +1,15 @@
+;
+; Test H element, CCVS
+;
+Vin 1 0
+R2 1 0 400
+R3 1 2 200
+
+H1 3 0 2 0 3
+R5 3 0 500
+solve 3 0 1 0
+
+answer
+h1
+——————
+r3

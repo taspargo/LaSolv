@@ -1,0 +1,15 @@
+;
+; Vo/Vi of ota type output stage
+Vi 11 0
+Rs 11 22 450
+Rpi 22 44 250
+Gm 0 44 22 44 0.25
+Cpi 22 44 1p
+Cl 44 0 10p
+
+solve 44 0 11 0
+
+answer
+Cpi*Rpi*s + Gm*Rpi + 1.0
+——————————————————————————————————————
+Cl*Cpi*Rpi*Rs*s^2 + Cl*Rpi*s + Cl*Rs*s + Cpi*Rpi*s + Gm*Rpi + 1

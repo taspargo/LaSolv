@@ -1,0 +1,16 @@
+;
+; tests ccvs element
+; Iin, solve for V/I
+Iin 0 1
+Ra 1 0
+Rb 2 0
+Ha 4 0 1 2
+Rc 4 5
+Rd 5 0
+solve 5 0 Iin
+
+
+answer
+Ha*Ra*Rd
+——————
+(Ra+Rb)*(Rc+Rd)
